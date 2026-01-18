@@ -27,12 +27,21 @@
         }
     </style>
     <!-- Socket.IO -->
-    <script src="https://cdns.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 
 <body>
+    <script>
+        window.onerror = function (message, source, lineno, colno, error) {
+            const debug = document.getElementById('debug');
+            if (debug) {
+                debug.innerHTML += '<br><span style="color:red">Error: ' + message + '</span>';
+            }
+            console.error(error);
+        };
+    </script>
     <div id="debug">3D Prototype Loading...</div>
     <script type="module" src="js/game3d.js"></script>
 </body>

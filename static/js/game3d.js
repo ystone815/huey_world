@@ -160,7 +160,7 @@ class Game3D {
 
     updateDebug(text) {
         const d = document.getElementById('debug');
-        if (d) d.innerText = text;
+        if (d) d.innerHTML += '<br>' + text;
     }
 
     animate() {
@@ -204,7 +204,10 @@ class Game3D {
     }
 }
 
-// Start Game
-window.onload = () => {
+// Start Game Immediately
+try {
     const game = new Game3D();
-};
+    game.updateDebug('Game initialized.');
+} catch (e) {
+    document.getElementById('debug').innerHTML += '<br>Init Error: ' + e.message;
+}
