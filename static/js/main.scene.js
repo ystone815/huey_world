@@ -8,6 +8,10 @@ export class MainScene extends Phaser.Scene {
     preload() {
         // Load the plugin formally via Phaser Loader to ensure it's ready
         this.load.plugin('rexvirtualjoystickplugin', 'static/js/vendor/rexvirtualjoystickplugin.min.js', true);
+
+        // Load Assets
+        this.load.image('character', 'static/assets/character.png');
+        this.load.image('tree', 'static/assets/tree.png');
     }
 
     create() {
@@ -44,31 +48,34 @@ export class MainScene extends Phaser.Scene {
             this.add.text(10, 100, "Socket Init Failed!", { fill: '#ff0000' }).setScrollFactor(0).setDepth(200);
         }
 
-        // 2. Create My Player (Container: Image + Text)
+        // 2. Create My Player (Container: Shadow + Sprite + Text)
         this.playerContainer = this.add.container(400, 300);
 
-        // Body (Image using generated texture)
-        this.player = this.add.image(0, 0, 'player_texture');
-        this.player.setTint(0x00FF00); // My player is Green (Local)
+        // Shadow
+        this.playerShadow = this.add.ellipse(0, 15, 24, 12, 0x000000, 0.3);
+
+        // Body (New Character Asset)
+        this.player = this.add.image(0, 0, 'character');
+        this.player.setDisplaySize(48, 48); // Scale it nicely
+        // this.player.setTint(0x00FF00); // Remove tint so we can see the cute art
 
         // Text
-        // Set World Bounds (Matches the grid size)
-        this.physics.world.setBounds(0, 0, 2000, 2000);
-
-        // Text
-        this.playerText = this.add.text(0, -25, this.nickname, {
+        this.playerText = this.add.text(0, -35, this.nickname, {
             font: '14px Arial',
             fill: '#ffffff',
             align: 'center'
         }).setOrigin(0.5);
 
-        this.playerContainer.add([this.player, this.playerText]);
+        this.playerContainer.add([this.playerShadow, this.player, this.playerText]);
         this.playerContainer.setSize(32, 32);
 
         this.physics.add.existing(this.playerContainer);
         this.playerContainer.body.setCollideWorldBounds(true);
 
-        // Follow player with camera
+        // Set World Bounds (Matches the grid size)
+        this.physics.world.setBounds(0, 0, 2000, 2000);
+
+        // Text
         this.cameras.main.startFollow(this.playerContainer);
         this.cameras.main.setBounds(0, 0, 2000, 2000);
 
@@ -79,6 +86,15 @@ export class MainScene extends Phaser.Scene {
             this.socketManager.socket.on('connect', () => {
                 this.socketManager.socket.emit('set_nickname', this.nickname);
             });
+        }
+
+        // 2.5 Setup Environment (Trees for Depth Test)
+        for (let i = 0; i < 20; i++) {
+            const tx = Phaser.Math.Between(100, 1900);
+            const ty = Phaser.Math.Between(100, 1900);
+            const tree = this.add.image(tx, ty, 'tree');
+            tree.setOrigin(0.5, 0.9); // Anchor at the bottom trunk for correct sorting
+            tree.setDisplaySize(96, 96);
         }
 
         // 3. Setup Input
@@ -160,24 +176,29 @@ export class MainScene extends Phaser.Scene {
             this.otherPlayers[sid].destroy();
         }
         const container = this.add.container(playerInfo.x, playerInfo.y);
-        const otherPlayer = this.add.image(0, 0, 'player_texture');
+
+        const shadow = this.add.ellipse(0, 15, 24, 12, 0x000000, 0.3);
+        const otherPlayer = this.add.image(0, 0, 'character');
+        otherPlayer.setDisplaySize(48, 48);
+
         let color = playerInfo.color;
         if (typeof color === 'string' && color.startsWith('#')) {
             color = parseInt(color.replace('#', '0x'));
         }
-        otherPlayer.setTint(color);
-        const otherText = this.add.text(0, -25, playerInfo.nickname || 'Unknown', {
+        otherPlayer.setTint(color); // Keep tint for others to distinguish them
+
+        const otherText = this.add.text(0, -35, playerInfo.nickname || 'Unknown', {
             font: '14px Arial',
             fill: '#ffffff',
             align: 'center'
         }).setOrigin(0.5);
-        container.add([otherPlayer, otherText]);
+
+        container.add([shadow, otherPlayer, otherText]);
         this.otherPlayers[sid] = container;
     }
 
     update() {
         if (!this.playerContainer) return;
-        // console.log("Update Loop Running"); // Extremely verbose, enable only if desperate
 
         const speed = 200;
         const body = this.playerContainer.body;
@@ -212,14 +233,14 @@ export class MainScene extends Phaser.Scene {
             body.setVelocityY(speed);
         }
 
-        // Emit movement if changed (Compare with LAST FRAME, not start of this function)
+        // Emit movement if changed (Compare with LAST FRAME)
         if (this.lastX === undefined) {
             this.lastX = this.playerContainer.x;
             this.lastY = this.playerContainer.y;
         }
 
         if (Math.abs(this.playerContainer.x - this.lastX) > 0.1 || Math.abs(this.playerContainer.y - this.lastY) > 0.1) {
-            console.log(`Pos Changed: ${this.lastX.toFixed(1)},${this.lastY.toFixed(1)} -> ${this.playerContainer.x.toFixed(1)},${this.playerContainer.y.toFixed(1)}`);
+            // console.log(`Pos Changed`);
             this.socketManager.emitMove(this.playerContainer.x, this.playerContainer.y);
 
             // Update last known position
@@ -235,7 +256,31 @@ export class MainScene extends Phaser.Scene {
             const inputStr = `L:${left ? 1 : 0} R:${right ? 1 : 0} U:${up ? 1 : 0} D:${down ? 1 : 0}`;
             const posStr = `X:${Math.round(this.playerContainer.x)} Y:${Math.round(this.playerContainer.y)}`;
 
-            debugEl.innerText = `[v2 Loaded]\nID: ${myId}\nOthers: ${othersCount}\nLastMove: ${window.lastMoveDebug || 'None'}\nFPS: ${Math.round(this.game.loop.actualFps)}\nInput: ${inputStr}\nPos: ${posStr}`;
+            debugEl.innerText = `[v2.5D Loaded]\nID: ${myId}\nOthers: ${othersCount}\nLastMove: ${window.lastMoveDebug || 'None'}\nFPS: ${Math.round(this.game.loop.actualFps)}\nInput: ${inputStr}\nPos: ${posStr}`;
         }
+
+        // Apply Depth Sorting
+        this.updateDepth();
+    }
+
+    updateDepth() {
+        // Y-Aorting: The lower the Y, the higher the depth value (closer to camera)
+        // We set depth = y. Simple as that.
+
+        this.children.each(child => {
+            // Only sort Sprites and Containers that are actors or trees
+            // We can check if they have a 'y' property and are not UI
+            if (child.input && child.input.enabled) return; // Skip UI like joystick? No, joystick has explicit depth.
+            if (child.scrollFactorX === 0) return; // Skip UI elements
+
+            // Adjust depth
+            child.setDepth(child.y);
+        });
+    }
+
+    createShadow(x, y) {
+        const shadow = this.add.ellipse(x, y, 20, 10, 0x000000, 0.3);
+        return shadow;
     }
 }
+
