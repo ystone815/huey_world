@@ -237,72 +237,74 @@ class Game3D {
                 }
             });
 
-            // Show hint if mobile
+            // Show hint if mobile (initially visible)
             const hint = document.getElementById('touch-hint');
             if (hint) hint.style.display = 'block';
 
-            this.updateDebug("Joystick Ready");
-            this.joystickData.active = false;
-            this.joystickData.x = 0;
-            this.joystickData.y = 0;
-        });
+            this.manager.on('end', () => {
+                this.joystickData.active = false;
+                this.joystickData.x = 0;
+                this.joystickData.y = 0;
+                // Show hint again if we want? Or keep hidden after first use?
+                // Let's keep it hidden to not annoy user.
+            });
 
-        this.updateDebug("Joystick Initialized");
-    } else {
-    // this.updateDebug("Nipple.js not found or zone missing");
-}
+            this.updateDebug("Joystick Initialized");
+        } else {
+            // this.updateDebug("Nipple.js not found or zone missing");
+        }
     }
 
-updateDebug(text) {
-    const d = document.getElementById('debug');
-    if (d) d.innerHTML += '<br>' + text;
-}
-
-animate() {
-    requestAnimationFrame(this.animate);
-
-    // Movement Logic
-    if (this.myPlayer) {
-        const speed = 5;
-        let dx = 0;
-        let dz = 0;
-
-        if (this.keys.w) dz -= speed;
-        if (this.keys.s) dz += speed;
-        if (this.keys.a) dx -= speed;
-        if (this.keys.d) dx += speed;
-
-        // Joystick Override
-        if (this.joystickData.active) {
-            dx = this.joystickData.x * speed;
-            dz = this.joystickData.y * speed;
-        }
-
-        if (dx !== 0 || dz !== 0) {
-            this.myPlayer.position.x += dx;
-            this.myPlayer.position.z += dz;
-
-            // Clamp to world
-            this.myPlayer.position.x = Math.max(0, Math.min(2000, this.myPlayer.position.x));
-            this.myPlayer.position.z = Math.max(0, Math.min(2000, this.myPlayer.position.z));
-
-            // Send to server
-            // Throttle? For prototype, just send per frame or check delta
-            this.socketManager.emitMove(this.myPlayer.position.x, this.myPlayer.position.z);
-        }
-
-        // Camera Follow
-        // Smoothly follow player
-        const targetPos = this.myPlayer.position.clone();
-        targetPos.y += 800; // Height offset
-        targetPos.z += 800; // Back offset
-
-        this.camera.position.lerp(targetPos, 0.1);
-        this.camera.lookAt(this.myPlayer.position);
+    updateDebug(text) {
+        const d = document.getElementById('debug');
+        if (d) d.innerHTML += '<br>' + text;
     }
 
-    this.renderer.render(this.scene, this.camera);
-}
+    animate() {
+        requestAnimationFrame(this.animate);
+
+        // Movement Logic
+        if (this.myPlayer) {
+            const speed = 5;
+            let dx = 0;
+            let dz = 0;
+
+            if (this.keys.w) dz -= speed;
+            if (this.keys.s) dz += speed;
+            if (this.keys.a) dx -= speed;
+            if (this.keys.d) dx += speed;
+
+            // Joystick Override
+            if (this.joystickData.active) {
+                dx = this.joystickData.x * speed;
+                dz = this.joystickData.y * speed;
+            }
+
+            if (dx !== 0 || dz !== 0) {
+                this.myPlayer.position.x += dx;
+                this.myPlayer.position.z += dz;
+
+                // Clamp to world
+                this.myPlayer.position.x = Math.max(0, Math.min(2000, this.myPlayer.position.x));
+                this.myPlayer.position.z = Math.max(0, Math.min(2000, this.myPlayer.position.z));
+
+                // Send to server
+                // Throttle? For prototype, just send per frame or check delta
+                this.socketManager.emitMove(this.myPlayer.position.x, this.myPlayer.position.z);
+            }
+
+            // Camera Follow
+            // Smoothly follow player
+            const targetPos = this.myPlayer.position.clone();
+            targetPos.y += 800; // Height offset
+            targetPos.z += 800; // Back offset
+
+            this.camera.position.lerp(targetPos, 0.1);
+            this.camera.lookAt(this.myPlayer.position);
+        }
+
+        this.renderer.render(this.scene, this.camera);
+    }
 }
 
 // UI Logic & Start
