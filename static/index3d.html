@@ -7,6 +7,18 @@
     <title>Huey World 3D</title>
     <style>
         /* ... existing styles ... */
+        #debug {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: rgba(0, 255, 0, 0.5);
+            font-family: monospace;
+            font-size: 10px;
+            z-index: 100;
+            pointer-events: none;
+            text-align: right;
+        }
+
         #login-overlay {
             position: absolute;
             top: 0;
@@ -74,7 +86,22 @@
             <button id="join-btn">Join Game</button>
         </div>
     </div>
-    <div id="debug">3D Prototype Loading...</div>
+    <div id="touch-hint" style="
+        position: absolute; 
+        top: 50%; 
+        left: 50%; 
+        transform: translate(-50%, -50%); 
+        color: white; 
+        font-family: Arial; 
+        font-size: 20px; 
+        opacity: 0.7; 
+        pointer-events: none; 
+        z-index: 90;
+        text-shadow: 0px 2px 4px black;
+        display: none;">
+        Touch & Drag to Move 🕹️
+    </div>
+    <div id="debug"></div>
     <div id="joystick-zone"></div>
     <script type="module" src="js/game3d.js"></script>
 </body>
