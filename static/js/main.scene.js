@@ -92,14 +92,20 @@ export class MainScene extends Phaser.Scene {
 
         // ... (skipping to next chunk in actual execution, but replace_file_content handles one contiguous block or I need multi_replace. Let's use multi_replace for efficiency)
 
-        // 2.5 Setup Environment (Trees for Depth Test)
-        for (let i = 0; i < 20; i++) {
-            const tx = Phaser.Math.Between(100, 1900);
-            const ty = Phaser.Math.Between(100, 1900);
-            const tree = this.add.image(tx, ty, 'tree');
+        // 2.5 Setup Environment (Fixed Map)
+        // Hardcoded tree positions for consistency across clients
+        const treePositions = [
+            { x: 400, y: 300 }, { x: 800, y: 400 }, { x: 200, y: 800 },
+            { x: 1200, y: 200 }, { x: 1500, y: 600 }, { x: 1000, y: 1000 },
+            { x: 300, y: 1500 }, { x: 1600, y: 1600 }, { x: 600, y: 1200 },
+            { x: 1800, y: 300 }, { x: 500, y: 500 }, { x: 1300, y: 1300 },
+        ];
+
+        treePositions.forEach(pos => {
+            const tree = this.add.image(pos.x, pos.y, 'tree');
             tree.setOrigin(0.5, 0.9); // Anchor at the bottom trunk for correct sorting
             tree.setDisplaySize(96, 96);
-        }
+        });
 
         // 3. Setup Input
         this.cursors = this.input.keyboard.createCursorKeys();
