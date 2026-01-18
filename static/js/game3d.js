@@ -77,8 +77,8 @@ class Game3D {
 
         // Create My Player Placeholder (will be synced with first move?)
         // Actually, let's create it at random pos or wait for server?
-        // Server doesn't send "your pos" on connect in this code. client decides spawn usually.
-        this.spawnPlayer(Math.random() * 1800 + 100, Math.random() * 1800 + 100);
+        // MOVED TO SOCKET CONNECT
+        // this.spawnPlayer(Math.random() * 1800 + 100, Math.random() * 1800 + 100);
 
         // Trees (Fixed Map)
         this.setupTrees();
@@ -92,10 +92,11 @@ class Game3D {
     }
 
     spawnPlayer(x, y) {
-        this.myPlayer = this.createCharacterSprite(x, y, true);
+        this.myNickname = this.socketManager.nickname || '3D_User';
+        this.myPlayer = this.createCharacterSprite(x, y, true, this.myNickname);
     }
 
-    createCharacterSprite(x, z, isMe) {
+    createCharacterSprite(x, z, isMe, nickname) {
         // Use Sprite for Billboard effect (always faces camera)
         const material = this.charMaterial.clone(); // Clone to allow different colors if needed
         if (isMe) material.color.setHex(0xFFFFFF); // Normal
@@ -107,8 +108,32 @@ class Game3D {
         sprite.scale.set(64, 64, 1);
         sprite.position.set(x, 32, z); // y is half height
 
-        this.scene.add(sprite);
-        return sprite;
+        // Add Name Tag
+        const name = nickname || 'Unknown';
+        const label = this.createNameLabel(name);
+        // Sprites can't have children in Three.js usually (they are simple objects).
+        // Wait, THREE.Object3D can have children.
+        // But THREE.Sprite is a mesh that faces camera.
+        // If we add label as child of sprite, it will inherit scale/rotation.
+        // It's better to create a Group if we want to bundle them.
+
+        // Correct approach: Return a Group containing both?
+        // OR just add label to scene and sync position. 
+        // Grouping is cleaner.
+
+        const group = new THREE.Group();
+        group.position.set(x, 0, z); // Group handles position
+
+        // Reset local sprite pos since group is at (x,0,z)
+        sprite.position.set(0, 32, 0);
+        group.add(sprite);
+
+        // Add label above head
+        label.position.set(0, 80, 0);
+        group.add(label);
+
+        this.scene.add(group);
+        return group; // We now return the GROUP, not just sprite
     }
 
     setupTrees() {
@@ -127,20 +152,48 @@ class Game3D {
         });
     }
 
+    createNameLabel(text) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 256;
+        canvas.height = 64;
+
+        context.font = 'Bold 32px Arial';
+        context.fillStyle = 'white';
+        context.textAlign = 'center';
+
+        // Shadow/Stroke for readability
+        context.shadowColor = "black";
+        context.shadowBlur = 4;
+        context.lineWidth = 4;
+        context.strokeText(text, 128, 48);
+        context.fillText(text, 128, 48);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(material);
+        // Aspect ratio fix
+        sprite.scale.set(128, 32, 1);
+        sprite.position.set(0, 40, 0); // Relative to parent
+
+        return sprite;
+    }
+
     addOtherPlayer(sid, info) {
         if (this.otherPlayers[sid]) return;
         console.log("Adding 3D other player", sid);
-        const sprite = this.createCharacterSprite(info.x || 0, info.y || 0, false);
-        this.otherPlayers[sid] = sprite;
+        const group = this.createCharacterSprite(info.x || 0, info.y || 0, false, info.nickname);
+        this.otherPlayers[sid] = group;
     }
 
     updateOtherPlayer(sid, x, y) {
         const p = this.otherPlayers[sid];
         if (p) {
-            p.position.set(x, 32, y);
+            // p is now a Group
+            p.position.set(x, 0, y);
         } else {
             // Might need to add if missing
-            this.addOtherPlayer(sid, { x, y });
+            // Cannot add here easily without nickname info, wait for next full sync or 'new_player'
         }
     }
 
