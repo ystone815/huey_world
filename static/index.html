@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Huey World</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #2d2d2d;
+        }
+
+        #game-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            pointer-events: none;
+            font-family: 'Arial', sans-serif;
+            z-index: 10;
+        }
+
+        .log-message {
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 4px;
+            text-shadow: 1px 1px 2px black;
+            font-size: 14px;
+        }
+
+        .error-log {
+            color: red;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 2px;
+            font-weight: bold;
+        }
+
+        #debug-log {
+            color: yellow;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            font-size: 14px;
+            font-family: monospace;
+            white-space: pre-line;
+            pointer-events: none;
+        }
+    </style>
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <!-- Phaser 3 -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <!-- Rex Virtual Joystick Plugin (Local) -->
+    <script src="static/js/vendor/rexvirtualjoystickplugin.min.js"></script>
+    <script>
+        // Global error handler to show errors on mobile screen
+        window.onerror = function (msg, url, line, col, error) {
+            const logDiv = document.getElementById('log-container');
+            if (logDiv) {
+                const errDiv = document.createElement('div');
+                errDiv.className = 'error-log';
+                errDiv.innerText = `ERR: ${msg} \n ${line}:${col}`;
+                logDiv.appendChild(errDiv);
+            }
+        };
+    </script>
+</head>
+
+<body>
+    <div id="game-container"></div>
+    <div id="ui-layer">
+        <div id="debug-log">Waiting for Game...</div>
+        <div id="log-container"></div>
+    </div>
+    <!-- Game Scripts -->
+    <script type="module" src="static/js/game.js"></script>
+    <script>
+        console.log("Huey World Client Ready");
+        // Socket is managed by SocketManager in main.scene.js
+    </script>
+</body>
+
+</html>
