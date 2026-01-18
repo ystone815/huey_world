@@ -71,6 +71,10 @@ class Game3D {
         window.addEventListener('keydown', (e) => this.onKey(e, true));
         window.addEventListener('keyup', (e) => this.onKey(e, false));
 
+        // Mobile Joystick Setup
+        this.joystickData = { active: false, x: 0, y: 0 };
+        this.initJoystick();
+
         // Create My Player Placeholder (will be synced with first move?)
         // Actually, let's create it at random pos or wait for server?
         // Server doesn't send "your pos" on connect in this code. client decides spawn usually.
@@ -158,6 +162,39 @@ class Game3D {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
+    initJoystick() {
+        const zone = document.getElementById('joystick-zone');
+        if (typeof nipplejs !== 'undefined' && zone) {
+            this.manager = nipplejs.create({
+                zone: zone,
+                mode: 'static',
+                position: { left: '50%', top: '50%' },
+                color: 'white'
+            });
+
+            this.manager.on('move', (evt, data) => {
+                if (data.vector) {
+                    this.joystickData.active = true;
+                    // nipplejs vector: y is up (positive), x is right.
+                    // 3D world: z is down (positive), x is right.
+                    // So Joystick Y+ (Up) -> 3D Z- (North)
+                    this.joystickData.x = data.vector.x;
+                    this.joystickData.y = -data.vector.y; // Invert Y for Z mapping
+                }
+            });
+
+            this.manager.on('end', () => {
+                this.joystickData.active = false;
+                this.joystickData.x = 0;
+                this.joystickData.y = 0;
+            });
+
+            this.updateDebug("Joystick Initialized");
+        } else {
+            // this.updateDebug("Nipple.js not found or zone missing");
+        }
+    }
+
     updateDebug(text) {
         const d = document.getElementById('debug');
         if (d) d.innerHTML += '<br>' + text;
@@ -176,6 +213,12 @@ class Game3D {
             if (this.keys.s) dz += speed;
             if (this.keys.a) dx -= speed;
             if (this.keys.d) dx += speed;
+
+            // Joystick Override
+            if (this.joystickData.active) {
+                dx = this.joystickData.x * speed;
+                dz = this.joystickData.y * speed;
+            }
 
             if (dx !== 0 || dz !== 0) {
                 this.myPlayer.position.x += dx;

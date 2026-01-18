@@ -25,11 +25,23 @@
             z-index: 100;
             pointer-events: none;
         }
+
+        #joystick-zone {
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            width: 150px;
+            height: 150px;
+            z-index: 50;
+            /* background: rgba(255, 0, 0, 0.1); Debug area */
+        }
     </style>
     <!-- Socket.IO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Nipple.js (Virtual Joystick) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
 </head>
 
 <body>
@@ -43,6 +55,7 @@
         };
     </script>
     <div id="debug">3D Prototype Loading...</div>
+    <div id="joystick-zone"></div>
     <script type="module" src="js/game3d.js"></script>
 </body>
 
