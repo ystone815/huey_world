@@ -11,9 +11,9 @@ export class SocketManager3D {
             console.log('3D Client Connected:', this.socket.id);
             this.game.updateDebug(`Connected: ${this.socket.id}`);
 
-            // Random Nickname
-            this.nickname = 'Guest_' + Math.floor(Math.random() * 1000);
-            this.game.spawnPlayer(Math.random() * 1800 + 100, Math.random() * 1800 + 100); // Spawn after connect to use nickname
+            // Use Nickname from Game instance
+            this.nickname = this.game.myNickname;
+            this.game.spawnPlayer(Math.random() * 1800 + 100, Math.random() * 1800 + 100);
 
             // Join the same world
             this.socket.emit('set_nickname', this.nickname);

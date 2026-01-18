@@ -1,7 +1,8 @@
 import { SocketManager3D } from './socket.manager.3d.js';
 
 class Game3D {
-    constructor() {
+    constructor(nickname) {
+        this.myNickname = nickname;
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x87CEEB); // Sky blue
 
@@ -92,7 +93,7 @@ class Game3D {
     }
 
     spawnPlayer(x, y) {
-        this.myNickname = this.socketManager.nickname || '3D_User';
+        // this.myNickname is already set in constructor
         this.myPlayer = this.createCharacterSprite(x, y, true, this.myNickname);
     }
 
@@ -299,10 +300,23 @@ class Game3D {
     }
 }
 
-// Start Game Immediately
-try {
-    const game = new Game3D();
-    game.updateDebug('Game initialized.');
-} catch (e) {
-    document.getElementById('debug').innerHTML += '<br>Init Error: ' + e.message;
+// UI Logic & Start
+document.getElementById('join-btn').addEventListener('click', () => {
+    const input = document.getElementById('nickname-input');
+    const name = input.value.trim();
+    if (name) {
+        document.getElementById('login-overlay').style.display = 'none';
+        startGame(name);
+    } else {
+        alert("Please enter a nickname!");
+    }
+});
+
+function startGame(nickname) {
+    try {
+        const game = new Game3D(nickname);
+        game.updateDebug(`Welcome, ${nickname}!`);
+    } catch (e) {
+        document.getElementById('debug').innerHTML += '<br>Init Error: ' + e.message;
+    }
 }
