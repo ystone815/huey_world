@@ -80,13 +80,17 @@ export class MainScene extends Phaser.Scene {
         this.cameras.main.setBounds(0, 0, 2000, 2000);
 
         // Notify server
-        if (this.socketManager.socket.connected) {
-            this.socketManager.socket.emit('set_nickname', this.nickname);
-        } else {
-            this.socketManager.socket.on('connect', () => {
+        if (this.socketManager && this.socketManager.socket) {
+            if (this.socketManager.socket.connected) {
                 this.socketManager.socket.emit('set_nickname', this.nickname);
-            });
+            } else {
+                this.socketManager.socket.on('connect', () => {
+                    this.socketManager.socket.emit('set_nickname', this.nickname);
+                });
+            }
         }
+
+        // ... (skipping to next chunk in actual execution, but replace_file_content handles one contiguous block or I need multi_replace. Let's use multi_replace for efficiency)
 
         // 2.5 Setup Environment (Trees for Depth Test)
         for (let i = 0; i < 20; i++) {
@@ -241,7 +245,9 @@ export class MainScene extends Phaser.Scene {
 
         if (Math.abs(this.playerContainer.x - this.lastX) > 0.1 || Math.abs(this.playerContainer.y - this.lastY) > 0.1) {
             // console.log(`Pos Changed`);
-            this.socketManager.emitMove(this.playerContainer.x, this.playerContainer.y);
+            if (this.socketManager) {
+                this.socketManager.emitMove(this.playerContainer.x, this.playerContainer.y);
+            }
 
             // Update last known position
             this.lastX = this.playerContainer.x;
@@ -251,7 +257,7 @@ export class MainScene extends Phaser.Scene {
         // Update Debug Text (HTML Overlay)
         const debugEl = document.getElementById('debug-log');
         if (debugEl) {
-            const myId = this.socketManager.socket ? this.socketManager.socket.id : 'No Socket';
+            const myId = (this.socketManager && this.socketManager.socket) ? this.socketManager.socket.id : 'No Socket';
             const othersCount = Object.keys(this.otherPlayers).length;
             const inputStr = `L:${left ? 1 : 0} R:${right ? 1 : 0} U:${up ? 1 : 0} D:${down ? 1 : 0}`;
             const posStr = `X:${Math.round(this.playerContainer.x)} Y:${Math.round(this.playerContainer.y)}`;
