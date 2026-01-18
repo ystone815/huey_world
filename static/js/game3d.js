@@ -167,8 +167,7 @@ class Game3D {
         if (typeof nipplejs !== 'undefined' && zone) {
             this.manager = nipplejs.create({
                 zone: zone,
-                mode: 'static',
-                position: { left: '50%', top: '50%' },
+                mode: 'dynamic',
                 color: 'white'
             });
 
