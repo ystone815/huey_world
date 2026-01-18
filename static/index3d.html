@@ -48,9 +48,24 @@
             cursor: pointer;
         }
     </style>
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Nipple.js (Virtual Joystick) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
 </head>
 
 <body>
+    <script>
+        window.onerror = function (message, source, lineno, colno, error) {
+            const debug = document.getElementById('debug');
+            if (debug) {
+                debug.innerHTML += '<br><span style="color:red">Error: ' + message + '</span>';
+            }
+            console.error(error);
+        };
+    </script>
     <div id="login-overlay">
         <div id="login-box">
             <h2>Enter Huey World 3D</h2>
