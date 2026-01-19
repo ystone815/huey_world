@@ -60,25 +60,35 @@ export class SocketManager {
         // Player Info Updated
         this.socket.on('update_player_info', (data) => {
             console.log(`Socket: update_player_info received for ${data.sid}, name: ${data.nickname}`);
-            if (this.scene.otherPlayers[data.sid]) {
-                const container = this.scene.otherPlayers[data.sid];
-                // Access by Name is safest
-                const textObj = container.getByName('nicknameText');
-                if (textObj && textObj.setText) {
-                    console.log(`Socket: Updating text for ${data.sid} to ${data.nickname}`);
-                    textObj.setText(data.nickname);
-                    this.addLog(`${data.nickname} updated info.`);
+
+            const attemptUpdate = (retryCount = 0) => {
+                if (this.scene.otherPlayers[data.sid]) {
+                    const container = this.scene.otherPlayers[data.sid];
+                    // Access by Name is safest
+                    const textObj = container.getByName('nicknameText');
+                    if (textObj && textObj.setText) {
+                        console.log(`Socket: Updating text for ${data.sid} to ${data.nickname}`);
+                        textObj.setText(data.nickname);
+                        this.addLog(`${data.nickname} updated info.`);
+                    } else {
+                        console.warn(`Socket: nicknameText object not found for ${data.sid}. List length: ${container.list.length}`);
+                        // Fallback to List[2] if name not found (for old objects)
+                        const fallbackObj = container.list[2];
+                        if (fallbackObj && fallbackObj.setText) {
+                            fallbackObj.setText(data.nickname);
+                        }
+                    }
                 } else {
-                    console.warn(`Socket: nicknameText object not found for ${data.sid}. List length: ${container.list.length}`);
-                    // Fallback to List[2] if name not found (for old objects)
-                    const fallbackObj = container.list[2];
-                    if (fallbackObj && fallbackObj.setText) {
-                        fallbackObj.setText(data.nickname);
+                    if (retryCount < 5) {
+                        console.warn(`Socket: Player ${data.sid} not found. Retrying update (${retryCount + 1}/5)...`);
+                        setTimeout(() => attemptUpdate(retryCount + 1), 500);
+                    } else {
+                        console.error(`Socket: Failed to update info for ${data.sid} after retries.`);
                     }
                 }
-            } else {
-                console.warn(`Socket: Player ${data.sid} not found in otherPlayers.`);
-            }
+            };
+
+            attemptUpdate();
         });
 
         // Player disconnected
