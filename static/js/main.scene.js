@@ -29,7 +29,9 @@ export class MainScene extends Phaser.Scene {
             context.strokeRect(0, 0, 32, 32);
             canvas.refresh();
         }
-        this.add.tileSprite(0, 0, 2000, 2000, 'grid_texture');
+        // Background covers -1000 to 1000. 
+        // Placing at -1000, -1000 with Origin 0 covers the area.
+        this.add.tileSprite(-1000, -1000, 2000, 2000, 'grid_texture').setOrigin(0);
 
         // 1. Generate Texture proceduraly
         if (!this.textures.exists('player_texture')) {
