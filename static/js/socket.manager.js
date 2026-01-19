@@ -31,6 +31,7 @@ export class SocketManager {
 
         // Initialize existing players
         this.socket.on('current_players', (players) => {
+            console.log("Socket: Received current_players", players);
             Object.keys(players).forEach((id) => {
                 if (id === this.socket.id) {
                     // It's me! Initialize my attributes if needed

@@ -45,6 +45,7 @@ async def connect(sid, environ):
 @sio.event
 async def set_nickname(sid, name):
     if sid in players:
+        print(f"Server: set_nickname for {sid} -> {name}")
         players[sid]['nickname'] = name
         # Broadcast update (reuse new_player or create player_update event, reusing new_player for simplicity or just ignoring for now until reload)
         # Better: emit a tailored event
