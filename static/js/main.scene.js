@@ -17,8 +17,6 @@ export class MainScene extends Phaser.Scene {
     create() {
         console.log("MainScene Created");
 
-
-
         // 0. Create Background (Grid)
         if (!this.textures.exists('grid_texture')) {
             const canvas = this.textures.createCanvas('grid_texture', 32, 32);
@@ -51,7 +49,8 @@ export class MainScene extends Phaser.Scene {
         }
 
         // 2. Create My Player (Container: Shadow + Sprite + Text)
-        this.playerContainer = this.add.container(400, 300);
+        // Spawn at 0,0 (Center of Safe Zone)
+        this.playerContainer = this.add.container(0, 0);
 
         // Shadow
         this.playerShadow = this.add.ellipse(0, 15, 24, 12, 0x000000, 0.3);
@@ -59,7 +58,6 @@ export class MainScene extends Phaser.Scene {
         // Body (New Character Asset)
         this.player = this.add.image(0, 0, 'character');
         this.player.setDisplaySize(48, 48); // Scale it nicely
-        // this.player.setTint(0x00FF00); // Remove tint so we can see the cute art
 
         // Text
         this.playerText = this.add.text(0, -35, this.nickname, {
@@ -74,12 +72,13 @@ export class MainScene extends Phaser.Scene {
         this.physics.add.existing(this.playerContainer);
         this.playerContainer.body.setCollideWorldBounds(true);
 
-        // Set World Bounds (Matches the grid size)
-        this.physics.world.setBounds(0, 0, 2000, 2000);
+        // Set World Bounds (-1000 to 1000)
+        // This makes 0,0 the exact center of the map
+        this.physics.world.setBounds(-1000, -1000, 2000, 2000);
 
-        // Text
+        // Camera Follow
         this.cameras.main.startFollow(this.playerContainer);
-        this.cameras.main.setBounds(0, 0, 2000, 2000);
+        this.cameras.main.setBounds(-1000, -1000, 2000, 2000);
 
         // Notify server
         if (this.socketManager && this.socketManager.socket) {
@@ -92,22 +91,24 @@ export class MainScene extends Phaser.Scene {
             }
         }
 
-        // ... (skipping to next chunk in actual execution, but replace_file_content handles one contiguous block or I need multi_replace. Let's use multi_replace for efficiency)
+        // 2.5 Setup Environment (Procedural Trees with Safe Zone)
+        // Safe Zone Radius = 150 (Buffer for 100 request)
+        const safeRadius = 150;
+        const mapRadius = 900; // Keep slightly inside bounds
 
-        // 2.5 Setup Environment (Fixed Map)
-        // Hardcoded tree positions for consistency across clients
-        const treePositions = [
-            { x: 400, y: 300 }, { x: 800, y: 400 }, { x: 200, y: 800 },
-            { x: 1200, y: 200 }, { x: 1500, y: 600 }, { x: 1000, y: 1000 },
-            { x: 300, y: 1500 }, { x: 1600, y: 1600 }, { x: 600, y: 1200 },
-            { x: 1800, y: 300 }, { x: 500, y: 500 }, { x: 1300, y: 1300 },
-        ];
+        for (let i = 0; i < 50; i++) {
+            let x, y, dist;
+            do {
+                x = Phaser.Math.Between(-mapRadius, mapRadius);
+                y = Phaser.Math.Between(-mapRadius, mapRadius);
+                dist = Math.hypot(x, y);
+            } while (dist < safeRadius); // Retry if inside safe zone
 
-        treePositions.forEach(pos => {
-            const tree = this.add.image(pos.x, pos.y, 'tree');
+            const tree = this.add.image(x, y, 'tree');
             tree.setOrigin(0.5, 0.9); // Anchor at the bottom trunk for correct sorting
             tree.setDisplaySize(96, 96);
-        });
+            tree.setDepth(y); // Simple Y-sort
+        }
 
         // 3. Setup Input
         this.cursors = this.input.keyboard.createCursorKeys();
