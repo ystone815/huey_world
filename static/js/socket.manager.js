@@ -60,12 +60,18 @@ export class SocketManager {
         // Player Info Updated
         this.socket.on('update_player_info', (data) => {
             if (this.scene.otherPlayers[data.sid]) {
-                // container children: [shadow, image, text]
-                // index 0: shadow, 1: image, 2: text
-                const textObj = this.scene.otherPlayers[data.sid].list[2];
+                const container = this.scene.otherPlayers[data.sid];
+                // Access by Name is safest
+                const textObj = container.getByName('nicknameText');
                 if (textObj && textObj.setText) {
                     textObj.setText(data.nickname);
                     this.addLog(`${data.nickname} updated info.`);
+                } else {
+                    // Fallback to List[2] if name not found (for old objects)
+                    const fallbackObj = container.list[2];
+                    if (fallbackObj && fallbackObj.setText) {
+                        fallbackObj.setText(data.nickname);
+                    }
                 }
             }
         });
