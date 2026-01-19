@@ -95,8 +95,6 @@ export class MainScene extends Phaser.Scene {
         // Top-Right Corner
         const minimapSize = 150;
         const padding = 20;
-        const mmX = this.sys.game.config.width - minimapSize - padding;
-        const mmY = padding;
 
         this.minimap = this.cameras.add(mmX, mmY, minimapSize, minimapSize)
             .setZoom(0.05) // Scale 0.05 to see 2000 height as 100px (approx)
@@ -237,7 +235,9 @@ export class MainScene extends Phaser.Scene {
             font: '14px Arial',
             fill: '#ffffff',
             align: 'center'
-        }).setOrigin(0.5);
+        })
+            .setOrigin(0.5)
+            .setName('nicknameText');
 
         container.add([shadow, otherPlayer, otherText]);
         this.otherPlayers[sid] = container;
