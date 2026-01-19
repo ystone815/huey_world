@@ -59,9 +59,13 @@ export class SocketManager {
         // Player Info Updated
         this.socket.on('update_player_info', (data) => {
             if (this.scene.otherPlayers[data.sid]) {
-                const textObj = this.scene.otherPlayers[data.sid].list[1];
-                if (textObj) textObj.setText(data.nickname);
-                this.addLog(`${data.nickname} updated info.`);
+                // container children: [shadow, image, text]
+                // index 0: shadow, 1: image, 2: text
+                const textObj = this.scene.otherPlayers[data.sid].list[2];
+                if (textObj && textObj.setText) {
+                    textObj.setText(data.nickname);
+                    this.addLog(`${data.nickname} updated info.`);
+                }
             }
         });
 
