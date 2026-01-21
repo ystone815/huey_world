@@ -6,7 +6,6 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 ---
 
 ## 🚀 Current Technical State
-- **Branch/Commit**: Reverted to `3f90ab52adffcd92cecd31d608a51bb147282b82` (Stable version with 0,0 center origin and 150px safe zone).
 - **Core Stack**:
   - **Frontend**: Phaser 3, Socket.IO Client.
   - **Backend**: Python (FastAPI, python-socketio), Uvicorn.
@@ -15,13 +14,17 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 ---
 
 ## 🛠 Features Implemented
-1.  **Multiplayer Sync**: Real-time position updates via `player_move` (emit) and `player_moved` (listen).
+1.  **Multiplayer Sync**: 
+    - Real-time position updates.
+    - **Nickname Sync**: Join & Update events verify nicknames to prevent "Unknown" players.
+    - **Spawn Logic**: New players spawn in the safe zone (-100 to 100).
 2.  **World Setup**: 
     - Coordinates: `-1000` to `1000` (Center is `0,0`).
-    - Safe Zone: `150px` radius at the center (no trees spawn here).
-    - Grid Background: TileSprite based texture.
-3.  **Movement**: 
+    - **Background**: Seamless dirt ground tile (no borders).
+    - **Safe Zone**: `150px` radius at the center (no trees spawn here).
+3.  **Movement & Physics**: 
     - Combined Keyboard (Cursors) + Virtual Joystick input.
+    - **Directional Flip**: Character sprite flips left/right based on movement direction.
     - Physics: Arcade Physics with world bound collision.
 4.  **Visuals**:
     - **Y-Sorting**: Custom `updateDepth()` ensures characters appear behind trees when "above" them.
@@ -29,32 +32,40 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 5.  **UI**:
     - **Minimap** (Top-Right, 150x150px):
       - Shows entire 2000x2000 world scaled down.
-      - Green dot = My player position (real-time sync).
-      - Orange dots = Other players (multiplayer sync).
-      - Green circle = Safe zone indicator (center).
-      - Implemented in `createMinimap()` and `updateMinimap()` methods.
+      - **Sync indicators**: Green dot (Me), Orange dots (Others), Green circle (Safe zone).
+      - Fixed issue with duplicate minimaps.
     - **Debug Overlay**: Shows FPS, Position, Input, and Socket ID.
 
 ---
 
-## ⚠️ Known Issues & Context for Next Steps
+## ⚠️ Known Issues
 1.  **Connection Handshake**:
-    - There were recent crashes/hangs when switching from manual `join_game` events to Socket.IO `auth` payloads. 
-    - **Current Hack**: The stable commit `3f90ab5` uses a manual join approach. If players get stuck on "Connecting...", ensure the `join_game` event is being fired *after* the connection is established.
-2.  **Visibility Bug**:
-    - Sometimes the Guest cannot see the Host (or vice versa). This is usually because the `current_players` event needs to be handled robustly to iterate through ALL existing players upon joining.
-3.  **Nickname Sync**:
-    - "Unknown" names appear if the nickname isn't passed immediately during the join handshake.
-4.  **UI "Status: Offline"**:
-    - A persistent text element sometimes covers the screen. Check `MainScene.js` for `this.connText` lifecycle.
+    - Occasionally players might get stuck on "Connecting..." if the server restarts. A refresh usually fixes this.
+    - Logic for `join_game` is now robust, ensuring current players are loaded correctly.
+
+---
+
+## 🗺️ Next Steps (Roadmap)
+Prioritized list of features to implement next:
+
+1.  **Gameplay**:
+    - [ ] **Collision System**: Add collision between players and trees.
+    - [ ] **Emoji System**: Keybound emotes (e.g., NumKeys 1-4) shown above character.
+    - [ ] **Animations**: Idle/Walk sprite animations.
+2.  **Social**:
+    - [ ] **Chat System**: Simple global chat box.
+3.  **UI/UX**:
+    - [ ] **Lobby Screen**: Proper nickname input UI before joining game.
+    - [ ] **Online List**: Show list of currently connected players.
 
 ---
 
 ## 📁 Key File Structure
-- `server.py`: FastAPI server logic and Socket.IO event handlers (`connect`, `join_game`, `player_move`).
-- `static/js/main.scene.js`: Main Phaser logic (Input, Rendering, Depth sorting).
-- `static/js/socket.manager.js`: Handles all Socket.IO client-side listeners.
-- `static/index.html`: Main entry point with UI layers and global error handling.
+- `server.py`: FastAPI server logic. Handles `connect`, `join_game`, `player_move`, `set_nickname`.
+- `static/js/main.scene.js`: Main Phaser logic. Handles `createMinimap`, `updateDepth`, Input.
+- `static/js/socket.manager.js`: Robust Socket.IO client listeners with retry logic for sync.
+- `static/index.html`: Main entry point with UI layers.
+- `static/assets/`: Contains `character.png`, `tree.png`, `ground.png`.
 
 ---
 

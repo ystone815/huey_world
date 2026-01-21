@@ -27,6 +27,10 @@ export class SocketManager {
         this.socket.on('connect', () => {
             console.log("Socket connected:", this.socket.id);
             this.addLog("Connected to server!");
+            // Send nickname once connected
+            if (this.scene.nickname) {
+                this.socket.emit('set_nickname', this.scene.nickname);
+            }
         });
 
         // Initialize existing players

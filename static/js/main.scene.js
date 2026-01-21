@@ -31,14 +31,9 @@ export class MainScene extends Phaser.Scene {
             graphics.generateTexture('player_texture', 32, 32);
         }
 
-        this.nickname = prompt("Please enter your nickname:", "Player") || "Player";
+        this.nickname = ""; // Set later by UI
         this.otherPlayers = {};
-        try {
-            this.socketManager = new SocketManager(this);
-        } catch (e) {
-            console.error("SocketManager Init Failed:", e);
-            this.add.text(10, 100, "Socket Init Failed!", { fill: '#ff0000' }).setScrollFactor(0).setDepth(200);
-        }
+        this.isJoined = false;
 
         // 2. Create My Player (Container: Shadow + Sprite + Text)
         // Spawn at 0,0 (Center of Safe Zone)
@@ -72,16 +67,10 @@ export class MainScene extends Phaser.Scene {
         this.cameras.main.startFollow(this.playerContainer);
         this.cameras.main.setBounds(-1000, -1000, 2000, 2000);
 
-        // Notify server
-        if (this.socketManager && this.socketManager.socket) {
-            if (this.socketManager.socket.connected) {
-                this.socketManager.socket.emit('set_nickname', this.nickname);
-            } else {
-                this.socketManager.socket.on('connect', () => {
-                    this.socketManager.socket.emit('set_nickname', this.nickname);
-                });
-            }
-        }
+        // Listen for external join event (from HTML UI)
+        this.events.on('request-join', (name) => {
+            this.joinGame(name);
+        });
 
         // 2.5 Setup Environment (Procedural Trees with Safe Zone)
         // Safe Zone Radius = 150 (Buffer for 100 request)
@@ -413,6 +402,20 @@ export class MainScene extends Phaser.Scene {
     createShadow(x, y) {
         const shadow = this.add.ellipse(x, y, 20, 10, 0x000000, 0.3);
         return shadow;
+    }
+
+    joinGame(name) {
+        if (this.isJoined) return;
+        this.nickname = name || "Player";
+        this.playerText.setText(this.nickname);
+        this.isJoined = true;
+
+        try {
+            this.socketManager = new SocketManager(this);
+            // SocketManager auto-connects and will emit 'set_nickname' on connect if we pass it
+        } catch (e) {
+            console.error("SocketManager Init Failed:", e);
+        }
     }
 }
 

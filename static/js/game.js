@@ -23,7 +23,9 @@ const config = {
 
 console.log("Game Config Loaded, Starting Phaser...");
 try {
+    // 4. Create Game Instance
     const game = new Phaser.Game(config);
+    window.phaserGame = game; // Expose for UI bridge
     console.log("Phaser Game Instance Created");
 } catch (e) {
     console.error("Phaser Init Failed:", e);
