@@ -137,8 +137,6 @@ export class MainScene extends Phaser.Scene {
             });
 
             console.log("Dynamic Joystick Configured");
-            this.add.text(10, 50, "DYNAMIC JOYSTICK", { fill: '#0f0', fontSize: '16px' })
-                .setScrollFactor(0).setDepth(100);
 
         } else {
             console.error("Rex Joystick Plugin could not be loaded.");
@@ -152,7 +150,10 @@ export class MainScene extends Phaser.Scene {
     }
 
     createMinimap() {
-        const minimapSize = 150;
+        // Detect mobile
+        const isMobile = this.sys.game.device.os.android || this.sys.game.device.os.iOS || window.innerWidth < 768;
+
+        const minimapSize = isMobile ? 100 : 150;
         const minimapPadding = 10;
         const worldSize = 2000;
         const minimapScale = minimapSize / worldSize;
@@ -160,9 +161,9 @@ export class MainScene extends Phaser.Scene {
         // Get screen dimensions
         const screenWidth = this.cameras.main.width;
 
-        // Create minimap container (Fixed to top-right)
+        // Create minimap container (Fixed to top-left)
         this.minimapContainer = this.add.container(
-            screenWidth - minimapSize - minimapPadding,
+            minimapPadding,
             minimapPadding
         ).setScrollFactor(0).setDepth(9999);
 

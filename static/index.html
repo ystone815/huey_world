@@ -25,9 +25,22 @@
             display: block;
         }
 
+        :root {
+            --minimap-size: 150px;
+            --minimap-padding: 10px;
+            --ui-top-offset: calc(var(--minimap-size) + var(--minimap-padding) + 10px);
+        }
+
+        @media screen and (max-width: 768px) {
+            :root {
+                --minimap-size: 100px;
+            }
+        }
+
         #ui-layer {
             position: absolute;
-            top: 10px;
+            top: calc(var(--ui-top-offset) + 80px);
+            /* Below online list */
             left: 10px;
             pointer-events: none;
             font-family: 'Arial', sans-serif;
@@ -230,12 +243,6 @@
         <div id="log-container"></div>
     </div>
 
-    <div id="online-list-panel">
-        <h3>ONLINE LIST</h3>
-        <div id="player-list-content">
-            <!-- Items added dynamically -->
-        </div>
-    </div>
     <!-- Game Scripts -->
     <script type="module" src="static/js/game.js"></script>
     <script>
