@@ -72,24 +72,8 @@ export class MainScene extends Phaser.Scene {
             this.joinGame(name);
         });
 
-        // 2.5 Setup Environment (Procedural Trees with Safe Zone)
-        // Safe Zone Radius = 150 (Buffer for 100 request)
-        const safeRadius = 150;
-        const mapRadius = 900; // Keep slightly inside bounds
-
-        for (let i = 0; i < 50; i++) {
-            let x, y, dist;
-            do {
-                x = Phaser.Math.Between(-mapRadius, mapRadius);
-                y = Phaser.Math.Between(-mapRadius, mapRadius);
-                dist = Math.hypot(x, y);
-            } while (dist < safeRadius); // Retry if inside safe zone
-
-            const tree = this.add.image(x, y, 'tree');
-            tree.setOrigin(0.5, 0.9); // Anchor at the bottom trunk for correct sorting
-            tree.setDisplaySize(96, 96);
-            tree.setDepth(y); // Simple Y-sort
-        }
+        // 2.5 Setup Environment (Trees - now handled by server data via renderMap)
+        this.treesGroup = this.add.group();
 
         // 3. Setup Input
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -402,6 +386,24 @@ export class MainScene extends Phaser.Scene {
     createShadow(x, y) {
         const shadow = this.add.ellipse(x, y, 20, 10, 0x000000, 0.3);
         return shadow;
+    }
+
+    renderMap(trees) {
+        // Clear existing trees if any (in case of reconnect)
+        if (this.treesGroup) {
+            this.treesGroup.clear(true, true);
+        } else {
+            this.treesGroup = this.add.group();
+        }
+
+        trees.forEach(t => {
+            const tree = this.add.image(t.x, t.y, 'tree');
+            tree.setOrigin(0.5, 0.9);
+            tree.setDisplaySize(96, 96);
+            tree.setDepth(t.y);
+            this.treesGroup.add(tree);
+        });
+        console.log(`Rendered ${trees.length} trees from server.`);
     }
 
     joinGame(name) {

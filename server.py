@@ -22,6 +22,29 @@ async def read_index():
 # In-memory player storage
 players = {}
 
+# Game World Data (Trees)
+import random
+MAP_SIZE = 900
+SAFE_RADIUS = 150
+TREE_COUNT = 60
+world_trees = []
+
+def generate_map():
+    global world_trees
+    world_trees = []
+    for _ in range(TREE_COUNT):
+        while True:
+            x = random.randint(-MAP_SIZE, MAP_SIZE)
+            y = random.randint(-MAP_SIZE, MAP_SIZE)
+            import math
+            dist = math.hypot(x, y)
+            if dist > SAFE_RADIUS:
+                world_trees.append({'x': x, 'y': y})
+                break
+    print(f"Generated map with {len(world_trees)} trees.")
+
+generate_map()
+
 @sio.event
 async def connect(sid, environ):
     print(f"Client connected: {sid}")
@@ -38,9 +61,12 @@ async def connect(sid, environ):
     # Send current players to the new guy
     await sio.emit('current_players', players, to=sid)
     
-    # Tell everyone else about the new guy (Including self, client filters it out) to ensure broadcast works
+    # Send Map Data (Trees)
+    await sio.emit('map_data', world_trees, to=sid)
+    
+    # Tell everyone else about the new guy
     await sio.emit('new_player', {'sid': sid, 'player': players[sid]})
-    print(f"Broadcasted new_player for {sid}")
+    print(f"Broadcasted new_player and map_data for {sid}")
 
 @sio.event
 async def set_nickname(sid, name):

@@ -50,6 +50,12 @@ export class SocketManager {
             this.addLog(`Joined world with ${Object.keys(players).length - 1} other players.`);
         });
 
+        // Map data from server
+        this.socket.on('map_data', (trees) => {
+            console.log("Socket: Received map_data", trees);
+            this.scene.renderMap(trees);
+        });
+
         // New player joined
         this.socket.on('new_player', (data) => {
             console.log("Socket: new_player", data);
