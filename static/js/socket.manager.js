@@ -46,6 +46,7 @@ export class SocketManager {
                     this.scene.addOtherPlayer(id, players[id]);
                 }
             });
+            this.scene.updateOnlineList();
             this.addLog(`Joined world with ${Object.keys(players).length - 1} other players.`);
         });
 
@@ -57,6 +58,7 @@ export class SocketManager {
             if (data.sid === this.socket.id) return;
 
             this.scene.addOtherPlayer(data.sid, data.player);
+            this.scene.updateOnlineList();
             const name = data.player.nickname || 'Unknown';
             this.addLog(`${name} joined the game.`);
         });
@@ -79,6 +81,7 @@ export class SocketManager {
                     if (textObj && textObj.setText) {
                         console.log(`Socket: Updating text for ${data.sid} to ${data.nickname}`);
                         textObj.setText(data.nickname);
+                        this.scene.updateOnlineList();
                         this.addLog(`${data.nickname} updated info.`);
                     } else {
                         console.warn(`Socket: nicknameText object not found for ${data.sid}. List length: ${container.list.length}`);
@@ -105,9 +108,10 @@ export class SocketManager {
         this.socket.on('player_disconnected', (sid) => {
             console.log("Socket: player_disconnected", sid);
             if (this.scene.otherPlayers[sid]) {
-                const name = this.scene.otherPlayers[sid].list[1].text;
+                const name = this.scene.otherPlayers[sid].list[2].text; // Container structure: [0]=shadow, [1]=sprite, [2]=text
                 this.scene.otherPlayers[sid].destroy();
                 delete this.scene.otherPlayers[sid];
+                this.scene.updateOnlineList();
                 this.addLog(`${name || 'A player'} left the game.`);
             } else {
                 console.warn(`Socket: Received disconnect for unknown sid ${sid}`);

@@ -410,12 +410,49 @@ export class MainScene extends Phaser.Scene {
         this.playerText.setText(this.nickname);
         this.isJoined = true;
 
+        // Show Online List
+        const listPanel = document.getElementById('online-list-panel');
+        if (listPanel) listPanel.style.display = 'block';
+
         try {
             this.socketManager = new SocketManager(this);
             // SocketManager auto-connects and will emit 'set_nickname' on connect if we pass it
         } catch (e) {
             console.error("SocketManager Init Failed:", e);
         }
+    }
+
+    updateOnlineList() {
+        const listContent = document.getElementById('player-list-content');
+        if (!listContent) return;
+
+        listContent.innerHTML = '';
+
+        // Add Me
+        const meItem = this.createPlayerListItem(this.nickname, true);
+        listContent.appendChild(meItem);
+
+        // Add Others
+        for (const [sid, container] of Object.entries(this.otherPlayers)) {
+            const nickname = container.getByName('nicknameText')?.text || 'Unknown';
+            const item = this.createPlayerListItem(nickname, false);
+            listContent.appendChild(item);
+        }
+    }
+
+    createPlayerListItem(name, isMe) {
+        const div = document.createElement('div');
+        div.className = 'player-list-item';
+
+        const dot = document.createElement('div');
+        dot.className = `player-status-dot ${isMe ? 'status-me' : 'status-other'}`;
+
+        const span = document.createElement('span');
+        span.innerText = name + (isMe ? ' (Me)' : '');
+
+        div.appendChild(dot);
+        div.appendChild(span);
+        return div;
     }
 }
 

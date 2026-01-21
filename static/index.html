@@ -138,6 +138,59 @@
         button:active {
             transform: translateY(1px);
         }
+
+        /* Online List Panel */
+        #online-list-panel {
+            position: absolute;
+            top: 10px;
+            right: 170px;
+            /* To the left of the minimap */
+            width: 150px;
+            max-height: 200px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            z-index: 100;
+            overflow-y: auto;
+            pointer-events: auto;
+            /* Allow scrolling and interaction */
+            display: none;
+            /* Show only when joined */
+        }
+
+        #online-list-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #ffcc00;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 5px;
+        }
+
+        .player-list-item {
+            font-size: 13px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .player-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-me {
+            background: #00ff00;
+        }
+
+        .status-other {
+            background: #ff6600;
+        }
     </style>
     <!-- Socket.IO -->
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
@@ -175,6 +228,13 @@
     <div id="ui-layer">
         <div id="debug-log">Waiting for Game...</div>
         <div id="log-container"></div>
+    </div>
+
+    <div id="online-list-panel">
+        <h3>ONLINE LIST</h3>
+        <div id="player-list-content">
+            <!-- Items added dynamically -->
+        </div>
     </div>
     <!-- Game Scripts -->
     <script type="module" src="static/js/game.js"></script>
