@@ -12,24 +12,16 @@ export class MainScene extends Phaser.Scene {
         // Load Assets
         this.load.image('character', 'static/assets/character.png');
         this.load.image('tree', 'static/assets/tree.png');
+        this.load.image('ground', 'static/assets/ground.png');
     }
 
     create() {
         console.log("MainScene Created");
 
-        // 0. Create Background (Grid)
-        if (!this.textures.exists('grid_texture')) {
-            const canvas = this.textures.createCanvas('grid_texture', 32, 32);
-            const context = canvas.context;
-            context.fillStyle = '#222222';
-            context.fillRect(0, 0, 32, 32);
-            context.strokeStyle = '#333333';
-            context.strokeRect(0, 0, 32, 32);
-            canvas.refresh();
-        }
+        // 0. Create Background (Forest Ground)
         // Background covers -1000 to 1000. 
         // Placing at -1000, -1000 with Origin 0 covers the area.
-        this.add.tileSprite(-1000, -1000, 2000, 2000, 'grid_texture').setOrigin(0);
+        this.add.tileSprite(-1000, -1000, 2000, 2000, 'ground').setOrigin(0);
 
         // 1. Generate Texture proceduraly
         if (!this.textures.exists('player_texture')) {
