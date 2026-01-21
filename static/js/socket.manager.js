@@ -57,9 +57,15 @@ export class SocketManager {
             this.addLog(`${name} joined the game.`);
         });
 
-        // Player Info Updated
+        // Player Info Updated (nickname sync)
         this.socket.on('update_player_info', (data) => {
             console.log(`Socket: update_player_info received for ${data.sid}, name: ${data.nickname}`);
+
+            // Update my own nickname display if it's me
+            if (data.sid === this.socket.id && this.scene.playerText) {
+                this.scene.playerText.setText(data.nickname);
+                return;
+            }
 
             const attemptUpdate = (retryCount = 0) => {
                 if (this.scene.otherPlayers[data.sid]) {

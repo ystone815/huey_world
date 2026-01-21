@@ -26,10 +26,10 @@ players = {}
 async def connect(sid, environ):
     print(f"Client connected: {sid}")
     import random
-    # Random position and color
+    # Random position in safe zone (center area) and color
     players[sid] = {
-        'x': random.randint(50, 750),
-        'y': random.randint(50, 550),
+        'x': random.randint(-100, 100),
+        'y': random.randint(-100, 100),
         'color': f'#{random.randint(0, 0xFFFFFF):06x}',
         'nickname': 'Unknown'
     }
@@ -48,8 +48,8 @@ async def set_nickname(sid, name):
         print(f"Server: set_nickname for {sid} -> {name}")
         players[sid]['nickname'] = name
         # Broadcast update (reuse new_player or create player_update event, reusing new_player for simplicity or just ignoring for now until reload)
-        # Better: emit a tailored event
-        await sio.emit('update_player_info', {'sid': sid, 'nickname': name}, skip_sid=sid)
+        # Broadcast to ALL players (including self for confirmation)
+        await sio.emit('update_player_info', {'sid': sid, 'nickname': name})
 
 @sio.event
 async def disconnect(sid):

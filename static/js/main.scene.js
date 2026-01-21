@@ -214,7 +214,90 @@ export class MainScene extends Phaser.Scene {
                 .setScrollFactor(0).setDepth(100);
         }
 
+        // 5. Create Minimap (Top-Right Corner)
+        this.createMinimap();
 
+    }
+
+    createMinimap() {
+        const minimapSize = 150;
+        const minimapPadding = 10;
+        const worldSize = 2000;
+        const minimapScale = minimapSize / worldSize;
+
+        // Get screen dimensions
+        const screenWidth = this.cameras.main.width;
+
+        // Create minimap container (Fixed to top-right)
+        this.minimapContainer = this.add.container(
+            screenWidth - minimapSize - minimapPadding,
+            minimapPadding
+        ).setScrollFactor(0).setDepth(9999);
+
+        // Minimap background (dark with border)
+        const minimapBg = this.add.rectangle(
+            minimapSize / 2,
+            minimapSize / 2,
+            minimapSize,
+            minimapSize,
+            0x111111,
+            0.8
+        ).setScrollFactor(0);
+        minimapBg.setStrokeStyle(2, 0x444444);
+
+        // Minimap border glow
+        const minimapBorder = this.add.rectangle(
+            minimapSize / 2,
+            minimapSize / 2,
+            minimapSize + 4,
+            minimapSize + 4,
+            0x000000,
+            0
+        ).setScrollFactor(0);
+        minimapBorder.setStrokeStyle(1, 0x666666);
+
+        // Safe zone indicator (circle at center)
+        const safeZoneRadius = 150 * minimapScale;
+        const safeZone = this.add.circle(
+            minimapSize / 2,
+            minimapSize / 2,
+            safeZoneRadius,
+            0x00ff00,
+            0.15
+        ).setScrollFactor(0);
+        safeZone.setStrokeStyle(1, 0x00ff00, 0.3);
+
+        // Player dot on minimap
+        this.minimapPlayerDot = this.add.circle(
+            minimapSize / 2,
+            minimapSize / 2,
+            4,
+            0x00ff00
+        ).setScrollFactor(0);
+        this.minimapPlayerDot.setStrokeStyle(1, 0xffffff);
+
+        // Other players container (for minimap dots)
+        this.minimapOtherDots = {};
+
+        // Add all elements to container
+        this.minimapContainer.add([minimapBorder, minimapBg, safeZone, this.minimapPlayerDot]);
+
+        // Store minimap config for updates
+        this.minimapConfig = {
+            size: minimapSize,
+            scale: minimapScale,
+            offsetX: minimapSize / 2,
+            offsetY: minimapSize / 2
+        };
+
+        // Label
+        const minimapLabel = this.add.text(
+            minimapSize / 2,
+            minimapSize + 8,
+            'MINIMAP',
+            { font: '10px Arial', fill: '#888888' }
+        ).setOrigin(0.5, 0).setScrollFactor(0);
+        this.minimapContainer.add(minimapLabel);
     }
 
     addOtherPlayer(sid, playerInfo) {
@@ -309,8 +392,46 @@ export class MainScene extends Phaser.Scene {
             debugEl.innerText = `[v2.5D Loaded]\nID: ${myId}\nOthers: ${othersCount}\nLastMove: ${window.lastMoveDebug || 'None'}\nFPS: ${Math.round(this.game.loop.actualFps)}\nInput: ${inputStr}\nPos: ${posStr}`;
         }
 
+        // Update Minimap
+        this.updateMinimap();
+
         // Apply Depth Sorting
         this.updateDepth();
+    }
+
+    updateMinimap() {
+        if (!this.minimapConfig || !this.minimapPlayerDot) return;
+
+        const { scale, offsetX, offsetY } = this.minimapConfig;
+
+        // Update my player position on minimap
+        // World coords: -1000 to 1000 -> Minimap coords: 0 to 150
+        const minimapX = (this.playerContainer.x + 1000) * scale;
+        const minimapY = (this.playerContainer.y + 1000) * scale;
+        this.minimapPlayerDot.setPosition(minimapX, minimapY);
+
+        // Update other players on minimap
+        for (const [sid, container] of Object.entries(this.otherPlayers)) {
+            if (!this.minimapOtherDots[sid]) {
+                // Create dot for this player
+                const dot = this.add.circle(0, 0, 3, 0xff6600);
+                dot.setStrokeStyle(1, 0xffffff);
+                this.minimapContainer.add(dot);
+                this.minimapOtherDots[sid] = dot;
+            }
+
+            const otherX = (container.x + 1000) * scale;
+            const otherY = (container.y + 1000) * scale;
+            this.minimapOtherDots[sid].setPosition(otherX, otherY);
+        }
+
+        // Remove dots for disconnected players
+        for (const sid of Object.keys(this.minimapOtherDots)) {
+            if (!this.otherPlayers[sid]) {
+                this.minimapOtherDots[sid].destroy();
+                delete this.minimapOtherDots[sid];
+            }
+        }
     }
 
     updateDepth() {
