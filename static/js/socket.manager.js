@@ -119,7 +119,22 @@ export class SocketManager {
             if (data.sid === this.socket.id) return;
 
             if (this.scene.otherPlayers[data.sid]) {
-                this.scene.otherPlayers[data.sid].setPosition(data.x, data.y);
+                const container = this.scene.otherPlayers[data.sid];
+                const prevX = container.x;
+
+                // Update position
+                container.setPosition(data.x, data.y);
+
+                // Flip sprite based on movement direction
+                // Container structure: [0]=shadow, [1]=sprite, [2]=text
+                const sprite = container.list[1];
+                if (sprite && sprite.setFlipX) {
+                    if (data.x < prevX) {
+                        sprite.setFlipX(true); // Moving left
+                    } else if (data.x > prevX) {
+                        sprite.setFlipX(false); // Moving right
+                    }
+                }
             }
         });
     }

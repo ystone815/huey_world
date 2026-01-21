@@ -91,39 +91,6 @@ export class MainScene extends Phaser.Scene {
             }
         }
 
-        // 3. Mini-map Implementation
-        // Top-Right Corner
-        const minimapSize = 150;
-        const padding = 20;
-        const mmX = this.scale.width - minimapSize - padding;
-        const mmY = padding;
-
-        this.minimap = this.cameras.add(mmX, mmY, minimapSize, minimapSize)
-            .setZoom(0.05) // Scale 0.05 to see 2000 height as 100px (approx)
-            .setName('mini')
-            .setBackgroundColor(0x002200);
-
-        // Minimap border (draw on Main Camera, not Minimap)
-        const border = this.add.graphics();
-        border.lineStyle(2, 0xffffff);
-        border.strokeRect(mmX, mmY, minimapSize, minimapSize);
-        border.setScrollFactor(0); // Stick to UI
-        border.setDepth(1000);
-
-        // Minimap should ignore UI elements if any. 
-        // For now, most UI is HTML or scroll-factored.
-        // ScrollFactor 0 items ARE rendered by all cameras unless ignored.
-        // We should explicitly make the minimap ignore specific UI items if they clutter it.
-        // For example, the Joystick UI.
-
-        this.minimap.scrollX = -1000; // Center at 0,0? No, camera uses top-left or center?
-        this.minimap.centerOn(0, 0);
-
-        // Let's make it fixed for now to show the whole world.
-        // World is -1000 to 1000 (size 2000).
-        // 150px / 2000px = 0.075 zoom.
-        this.minimap.setZoom(0.07);
-
         // 2.5 Setup Environment (Procedural Trees with Safe Zone)
         // Safe Zone Radius = 150 (Buffer for 100 request)
         const safeRadius = 150;
@@ -353,8 +320,10 @@ export class MainScene extends Phaser.Scene {
         // Horizontal movement
         if (left) {
             body.setVelocityX(-speed);
+            this.player.setFlipX(true); // Face left
         } else if (right) {
             body.setVelocityX(speed);
+            this.player.setFlipX(false); // Face right
         }
 
         // Vertical movement
