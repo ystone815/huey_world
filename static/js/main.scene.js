@@ -283,20 +283,49 @@ export class MainScene extends Phaser.Scene {
             down = down || this.joyCursors.down.isDown;
         }
 
+        let isWalking = false;
+
         // Horizontal movement
         if (left) {
             body.setVelocityX(-speed);
             this.player.setFlipX(true); // Face left
+            isWalking = true;
         } else if (right) {
             body.setVelocityX(speed);
             this.player.setFlipX(false); // Face right
+            isWalking = true;
         }
 
         // Vertical movement
         if (up) {
             body.setVelocityY(-speed);
+            isWalking = true;
         } else if (down) {
             body.setVelocityY(speed);
+            isWalking = true;
+        }
+
+        // --- PROCEDURAL ANIMATION (Bobbing) ---
+        if (isWalking) {
+            const t = this.time.now * 0.015; // Animation speed
+            this.player.y = Math.abs(Math.sin(t)) * -8; // Bounce up
+            this.player.rotation = Math.sin(t) * 0.1; // Tilt
+        } else {
+            this.player.y = 0;
+            this.player.rotation = 0;
+        }
+
+        // Animate other players
+        for (const [sid, container] of Object.entries(this.otherPlayers)) {
+            const sprite = container.list[1];
+            if (container.lastMoveTime && (this.time.now - container.lastMoveTime < 100)) {
+                const t = this.time.now * 0.015;
+                sprite.y = Math.abs(Math.sin(t)) * -8;
+                sprite.rotation = Math.sin(t) * 0.1;
+            } else {
+                sprite.y = 0;
+                sprite.rotation = 0;
+            }
         }
 
         // Emit movement if changed (Compare with LAST FRAME)

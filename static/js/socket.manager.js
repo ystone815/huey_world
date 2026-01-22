@@ -138,6 +138,7 @@ export class SocketManager {
 
                 // Update position
                 container.setPosition(data.x, data.y);
+                container.lastMoveTime = this.scene.time.now; // Track for animation
 
                 // Flip sprite based on movement direction
                 // Container structure: [0]=shadow, [1]=sprite, [2]=text
