@@ -145,8 +145,8 @@ export class MainScene extends Phaser.Scene {
         this.bonfireLight = this.add.circle(80, 50, 60, 0xffaa00, 0.2);
         this.bonfireLight.setDisplaySize(80, 80);
 
-        // Phaser 2D Point Light for Bonfire
-        this.bonfirePointLight = this.lights.addLight(80, 50, 200).setColor(0xffaa00).setIntensity(2);
+        // Phaser 2D Point Light for Bonfire (Doubled range: 400)
+        this.bonfirePointLight = this.lights.addLight(80, 50, 400).setColor(0xffaa00).setIntensity(2.5);
 
         this.tweens.add({
             targets: this.bonfireLight,
@@ -161,12 +161,13 @@ export class MainScene extends Phaser.Scene {
         // Animate Point Light Flicker
         this.tweens.add({
             targets: this.bonfirePointLight,
-            intensity: { from: 1.5, to: 2.5 },
-            radius: { from: 180, to: 220 },
+            intensity: { from: 2.0, to: 3.0 },
+            radius: { from: 380, to: 420 },
             duration: 100,
             yoyo: true,
             repeat: -1
         });
+
 
 
 
@@ -546,12 +547,14 @@ export class MainScene extends Phaser.Scene {
 
         const time = this.worldTime;
 
-        { t: 0.0, r: 5, g: 5, b: 20 },      // Midnight (Darker)
-        { t: 0.25, r: 170, g: 136, b: 255 },// Dawn
-        { t: 0.5, r: 255, g: 255, b: 255 },  // Noon
-        { t: 0.75, r: 255, g: 136, b: 68 }, // Dusk
-        { t: 1.0, r: 5, g: 5, b: 20 }       // Midnight (Loop)
+        const colors = [
+            { t: 0.0, r: 5, g: 5, b: 20 },      // Midnight (Darker)
+            { t: 0.25, r: 170, g: 136, b: 255 },// Dawn
+            { t: 0.5, r: 255, g: 255, b: 255 },  // Noon
+            { t: 0.75, r: 255, g: 136, b: 68 }, // Dusk
+            { t: 1.0, r: 5, g: 5, b: 20 }       // Midnight (Loop)
         ];
+
 
 
 
@@ -586,8 +589,8 @@ export class MainScene extends Phaser.Scene {
         }
 
         // --- UPDATE CLOCK UI ---
-        // worldTime 0.0 = 12:00
-        const totalMinutes = (time * 24 * 60 + 12 * 60) % (24 * 60);
+        // worldTime 0.0 = 00:00 (Midnight)
+        const totalMinutes = (time * 24 * 60) % (24 * 60);
         const hours = Math.floor(totalMinutes / 60);
         const minutes = Math.floor(totalMinutes % 60);
 
@@ -596,10 +599,11 @@ export class MainScene extends Phaser.Scene {
             this.minimapTimeText.setText(timeString);
 
             // Color feedback: Blue at night, Orange at dawn/dusk, White at noon
-            if (time > 0.4 && time < 0.6) this.minimapTimeText.setFill('#66aaff');
-            else if (time > 0.2 && time < 0.8) this.minimapTimeText.setFill('#ffaa44');
+            if (time > 0.8 || time < 0.2) this.minimapTimeText.setFill('#66aaff');
+            else if (time > 0.2 && time < 0.4 || time > 0.6 && time < 0.8) this.minimapTimeText.setFill('#ffaa44');
             else this.minimapTimeText.setFill('#ffffff');
         }
+
     }
 
 

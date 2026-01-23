@@ -3,6 +3,10 @@
 ## 📝 Overview
 A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and **FastAPI + Socket.IO** (Backend). Players control a fox character in a grid-based world with procedural trees and a minimap.
 
+
+## Rules
+- Git commit과 push는 유저가 요청할때에만 수행할것.
+
 ---
 
 ## 🚀 Current Technical State
@@ -44,12 +48,20 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 7.  **Map Persistence**:
     - World trees are saved to `db/map/forest.json`.
     - Server loads existing map on startup or generates a new one if missing.
-8.  **Interactive Objects**:
-    - **Bonfire**: Animated object at `(80, 50)` with flickering fire and ground glow.
-9.  **Character Selection System**:
-    - 4 unique skins: Fox, Cyber-Cat, Shi-Dog, Panda-Mage.
-    - Lobby UI for selection with real-time sync across players.
-    - High-quality pixel art with refined transparency and proportional scaling.
+9.  **Interactive Objects**:
+    - **Bonfire**: Animated object at `(80, 50)` with flickering fire. Light range expanded to `400px` for better night coverage.
+10. **NPC System (Wandering Creatures)**:
+    - **Entities**: Roach (Fast/Jittery) and Sheep (Slow/Peaceful).
+    - **Logic**: Server-side target-seeking and wandering logic.
+    - **Scaling**: Rendered at `~85%` (42px) of player size.
+11. **Day/Night Cycle & 2D Lighting**:
+    - **Cycle**: 5-minute real-time day (300s). `0.0` is Midnight (`00:00`).
+    - **Lighting**: Phaser 2D Light pipeline enabled for all sprites.
+    - **Ambient**: Transitions between Midnight (Dark), Dawn (Purple), Noon (Bright), and Dusk (Orange).
+    - **Clock**: 24-hour digital clock display below the minimap.
+12. **Character Refinements**:
+    - **Panda Skin Fix**: Restored opacity (Alpha 255) to 30,000+ white fur pixels that were accidentally transparent.
+
 
 ---
 
@@ -61,13 +73,14 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 
 ## 🗺️ Next Steps (Brainstormed Ideas)
 1.  **Visual Juice**:
-    - [ ] **Day/Night System**: Dynamic lighting that changes with time.
     - [ ] **Particle Effects**: Dust on walking, fire sparks, rain/snow.
-    - [ ] **Environmental Life**: Butterflies or squirrels that react to players.
+    - [ ] **Environmental Life**: More reactive entities (e.g., squirrels, birds).
+    - [ ] **Weather System**: Occasional rainy phases affecting lighting.
 2.  **Social & Expression**:
     - [ ] **Emoji Popups**: Numbers 1-4 triggers emoji bubbles above head (High Priority).
     - [ ] **Global Chat**: Real-time communication bar.
-    - [ ] **Titles**: Achievement-based labels (e.g., "Fire Keeper").
+    - [ ] **Titles**: Achievement-based labels (e.g., "Night Owl").
+
 3.  **Gamification**:
     - [ ] **Collectibles**: Gathering acorns or flowers in the woods.
     - [ ] **Pets**: Small companions following the player.
@@ -75,11 +88,13 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - [ ] **BGM/SFX**: Atmospheric forest music and walking sound effects.
 
 ## ✅ Completed in this Session (Latest)
-- **Character Selection**: Grid-based skin choosing with 4 unique assets.
-- **Sprite Refinement**: Specialized transparency and padding cleanup for all skins.
-- **Collision & Navigation**: Physics-based tree collisions and improved joystick feel.
-- **Map Persistence**: JSON-based world state handling.
-- **Multiplayer Sync**: Fixed character flipping and scaling issues for all skins.
+- **Day/Night System**: Implemented 5-minute cycle with Phaser 2D lighting and ambient color shifts.
+- **Game Clock**: Added 24-hour UI display below the minimap (00:00 synchronized with server).
+- **NPC System**: Added wandering Roach and Sheep with server-side logic and multiplayer sync.
+- **Panda Skin Fix**: Restored opacity to white fur areas via custom processing script.
+- **Lighting Refinement**: Doubled bonfire range (400px), removed player self-light, and darkened night phase.
+- **Bug Fixes**: Resolved `math` import errors and syntax issues in `main.scene.js`.
+
 
 
 
