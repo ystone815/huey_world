@@ -32,7 +32,9 @@ export class MainScene extends Phaser.Scene {
         // 0. Create Background (Forest Ground)
         // Background covers -1000 to 1000. 
         // Placing at -1000, -1000 with Origin 0 covers the area.
-        this.add.tileSprite(-1000, -1000, 2000, 2000, 'ground').setOrigin(0);
+        this.ground = this.add.tileSprite(-1000, -1000, 2000, 2000, 'ground').setOrigin(0);
+        this.ground.setPipeline('Light2D');
+
 
         // 1. Generate Texture proceduraly
         if (!this.textures.exists('player_texture')) {
@@ -46,6 +48,11 @@ export class MainScene extends Phaser.Scene {
         this.otherPlayers = {};
         this.npcs = {};
         this.isJoined = false;
+
+        // Day/Night System
+        this.worldTime = 0.5; // Default to Noon
+        this.lights.enable().setAmbientColor(0xffffff);
+
 
 
         // 2. Create My Player (Container: Shadow + Sprite + Text)
@@ -69,7 +76,13 @@ export class MainScene extends Phaser.Scene {
         this.playerContainer.add([this.playerShadow, this.player, this.playerText]);
         this.playerContainer.setSize(32, 32);
 
+        // Character and Shadow should be affected by light
+        this.player.setPipeline('Light2D');
+        this.playerShadow.setPipeline('Light2D');
+
         this.physics.add.existing(this.playerContainer);
+
+
         this.playerContainer.body.setCollideWorldBounds(true);
 
         // Set World Bounds (-1000 to 1000)
@@ -103,6 +116,8 @@ export class MainScene extends Phaser.Scene {
         this.bonfire.setDisplaySize(48, 48); // Scale to match player roughly
         this.bonfire.setOrigin(0.5, 0.7); // Anchor at bottom center
         this.bonfire.setDepth(50); // Will be sorted by updateDepth later
+        this.bonfire.setPipeline('Light2D');
+
 
         // Add simple light/flicker effect
         // 1. Scale Tween (Breathing)
@@ -129,6 +144,10 @@ export class MainScene extends Phaser.Scene {
         // 3. Light Glow (Circle behind)
         this.bonfireLight = this.add.circle(80, 50, 60, 0xffaa00, 0.2);
         this.bonfireLight.setDisplaySize(80, 80);
+
+        // Phaser 2D Point Light for Bonfire
+        this.bonfirePointLight = this.lights.addLight(80, 50, 200).setColor(0xffaa00).setIntensity(2);
+
         this.tweens.add({
             targets: this.bonfireLight,
             alpha: 0.4,
@@ -138,6 +157,17 @@ export class MainScene extends Phaser.Scene {
             yoyo: true,
             repeat: -1
         });
+
+        // Animate Point Light Flicker
+        this.tweens.add({
+            targets: this.bonfirePointLight,
+            intensity: { from: 1.5, to: 2.5 },
+            radius: { from: 180, to: 220 },
+            duration: 100,
+            yoyo: true,
+            repeat: -1
+        });
+
 
 
         // 2.3 Proximity Interaction setup
@@ -320,7 +350,17 @@ export class MainScene extends Phaser.Scene {
             { font: '10px Arial', fill: '#888888' }
         ).setOrigin(0.5, 0).setScrollFactor(0);
         this.minimapContainer.add(minimapLabel);
+
+        // Time Clock Text (Below Label)
+        this.minimapTimeText = this.add.text(
+            minimapSize / 2,
+            minimapSize + 22,
+            '12:00',
+            { font: 'bold 14px Consolas, monospace', fill: '#ffffff' }
+        ).setOrigin(0.5, 0).setScrollFactor(0);
+        this.minimapContainer.add(this.minimapTimeText);
     }
+
 
     addOtherPlayer(sid, playerInfo) {
         if (this.otherPlayers[sid]) {
@@ -331,6 +371,9 @@ export class MainScene extends Phaser.Scene {
         const shadow = this.add.ellipse(0, 15, 24, 12, 0x000000, 0.3);
         const skinKey = playerInfo.skin || 'skin_fox';
         const otherPlayer = this.add.image(0, 0, skinKey);
+        otherPlayer.setPipeline('Light2D');
+        shadow.setPipeline('Light2D');
+
 
         // Scale to 48px width, maintain aspect ratio
         otherPlayer.displayWidth = 48;
@@ -495,7 +538,71 @@ export class MainScene extends Phaser.Scene {
 
         this.updateMinimap();
         this.updateDepth();
+        this.updateEnvironmentColors();
     }
+
+    updateEnvironmentColors() {
+        if (!this.lights) return;
+
+        const time = this.worldTime;
+
+        { t: 0.0, r: 5, g: 5, b: 20 },      // Midnight (Darker)
+        { t: 0.25, r: 170, g: 136, b: 255 },// Dawn
+        { t: 0.5, r: 255, g: 255, b: 255 },  // Noon
+        { t: 0.75, r: 255, g: 136, b: 68 }, // Dusk
+        { t: 1.0, r: 5, g: 5, b: 20 }       // Midnight (Loop)
+        ];
+
+
+
+        let lower = colors[0];
+        let upper = colors[1];
+
+        for (let i = 0; i < colors.length - 1; i++) {
+            if (time >= colors[i].t && time <= colors[i + 1].t) {
+                lower = colors[i];
+                upper = colors[i + 1];
+                break;
+            }
+        }
+
+        const frac = (time - lower.t) / (upper.t - lower.t);
+        const r = Math.floor(lower.r + (upper.r - lower.r) * frac);
+        const g = Math.floor(lower.g + (upper.g - lower.g) * frac);
+        const b = Math.floor(lower.b + (upper.b - lower.b) * frac);
+
+        this.lights.setAmbientColor(Phaser.Display.Color.GetColor(r, g, b));
+
+        // Intensity of point light (Stronger at night)
+        // Max at 0.5 (Night)
+        let intensity = 0;
+        if (time > 0.3 && time < 0.7) {
+            intensity = 1.5;
+        }
+
+        if (this.playerLight) {
+            this.playerLight.setPosition(this.playerContainer.x, this.playerContainer.y);
+            this.playerLight.setIntensity(intensity);
+        }
+
+        // --- UPDATE CLOCK UI ---
+        // worldTime 0.0 = 12:00
+        const totalMinutes = (time * 24 * 60 + 12 * 60) % (24 * 60);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = Math.floor(totalMinutes % 60);
+
+        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        if (this.minimapTimeText) {
+            this.minimapTimeText.setText(timeString);
+
+            // Color feedback: Blue at night, Orange at dawn/dusk, White at noon
+            if (time > 0.4 && time < 0.6) this.minimapTimeText.setFill('#66aaff');
+            else if (time > 0.2 && time < 0.8) this.minimapTimeText.setFill('#ffaa44');
+            else this.minimapTimeText.setFill('#ffffff');
+        }
+    }
+
+
 
     initNPCs(npcData) {
         Object.values(this.npcs).forEach(n => n.destroy());
@@ -514,7 +621,11 @@ export class MainScene extends Phaser.Scene {
                 sprite = this.add.rectangle(0, 0, 32, 32, color);
             }
 
+            sprite.setPipeline('Light2D');
+            shadow.setPipeline('Light2D');
+
             sprite.setOrigin(0.5, 0.5);
+
             // Larger NPCs (approx 85% of player size)
             sprite.displayWidth = 42;
             sprite.scaleY = sprite.scaleX;
@@ -615,6 +726,8 @@ export class MainScene extends Phaser.Scene {
         trees.forEach(t => {
             // Create tree as part of the physics group
             const tree = this.treesGroup.create(t.x, t.y, 'tree');
+            tree.setPipeline('Light2D');
+
 
             // Visuals
             tree.setOrigin(0.5, 0.9);

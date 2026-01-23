@@ -10,10 +10,13 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Start NPC loop
+    # Startup: Start NPC loop and Time loop
     print("Server: Starting NPC movement loop...")
     asyncio.create_task(update_npcs_loop())
+    print("Server: Starting World Time loop...")
+    asyncio.create_task(update_world_time_loop())
     yield
+
     # Shutdown logic (optional)
     print("Server: Shutting down...")
 
@@ -119,7 +122,23 @@ def get_messages_from_db():
     conn.close()
     return [{'nickname': r[0], 'message': r[1], 'timestamp': r[2]} for r in rows]
 
+# Day/Night Cycle State
+CYCLE_DURATION = 300 # 5 minutes in seconds
+world_time = 0.0 # 0.0 to 1.0
+
+async def update_world_time_loop():
+    global world_time
+    import time
+    start_time = time.time()
+    while True:
+        elapsed = time.time() - start_time
+        world_time = (elapsed % CYCLE_DURATION) / CYCLE_DURATION
+        # Broadcast roughly every 5 seconds to keep synced
+        await sio.emit('time_update', {'world_time': world_time})
+        await asyncio.sleep(5)
+
 init_db()
+
 
 def load_or_generate_map():
     global world_trees
@@ -218,7 +237,11 @@ async def connect(sid, environ):
     # Send NPC Data
     await sio.emit('npc_data', list(npcs.values()), to=sid)
     
+    # Send Current Time
+    await sio.emit('time_init', {'world_time': world_time}, to=sid)
+    
     # Tell everyone else about the new guy
+
     await sio.emit('new_player', {'sid': sid, 'player': players[sid]})
 
     print(f"Broadcasted new_player and map_data for {sid}")

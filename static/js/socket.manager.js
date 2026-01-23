@@ -83,6 +83,16 @@ export class SocketManager {
             this.addSinglePostToUI(post);
         });
 
+        // Time synchronization
+        this.socket.on('time_init', (data) => {
+            this.scene.worldTime = data.world_time;
+            console.log("Socket: Initial world time:", data.world_time);
+        });
+
+        this.socket.on('time_update', (data) => {
+            this.scene.worldTime = data.world_time;
+        });
+
         // New player joined
         this.socket.on('new_player', (data) => {
             console.log("Socket: new_player", data);
