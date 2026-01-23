@@ -22,7 +22,7 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 ## 🛠 Features Implemented
 1.  **Multiplayer Sync**: 
     - Real-time position updates.
-    - **Nickname Sync**: Join & Update events verify nicknames to prevent "Unknown" players.
+    - **Nickname Sync & Validation**: Join & Update events verify nicknames for uniqueness to prevent duplicates.
     - **Spawn Logic**: New players spawn in the safe zone (-100 to 100).
 2.  **World Setup**: 
     - Coordinates: `-1000` to `1000` (Center is `0,0`).
@@ -104,7 +104,8 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 - **Input Refinement**: Implemented quadrant-limited dynamic joystick (30px) and switched desktop controls to WASD.
 - **Camera Zoom**: Added automatic mobile-zoom detection and manual UI controls for field-of-view adjustment (REMOVED: User requested removal due to functionality issues).
 - **Minimap Enhancement**: Added trees (dark green) and NPCs (yellow) to the minimap with real-time sync for entities.
-- **Bug Fixes**: Resolved syntax errors and code duplication in `main.scene.js`.
+- **Nicknames**: Fixed uniqueness logic on server with real-time feedback in lobby UI.
+- **Bug Fixes**: Resolved code duplication and refined event listeners in `socket.manager.js`.
 
 
 
