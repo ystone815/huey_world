@@ -19,7 +19,12 @@ export class MainScene extends Phaser.Scene {
         this.load.image('bonfire', 'static/assets/bonfire.png');
 
         this.load.image('ground', 'static/assets/ground.png');
+
+        // NPCs
+        this.load.image('npc_roach', 'static/assets/npc_roach.png');
+        this.load.image('npc_sheep', 'static/assets/npc_sheep.png');
     }
+
 
     create() {
         console.log("MainScene Created");
@@ -39,7 +44,9 @@ export class MainScene extends Phaser.Scene {
 
         this.nickname = ""; // Set later by UI
         this.otherPlayers = {};
+        this.npcs = {};
         this.isJoined = false;
+
 
         // 2. Create My Player (Container: Shadow + Sprite + Text)
         // Spawn at 0,0 (Center of Safe Zone)
@@ -149,9 +156,12 @@ export class MainScene extends Phaser.Scene {
         });
 
         // 2.5 Setup Environment (Trees - now handled by server data via renderMap)
-        // 2.5 Setup Environment (Trees - now handled by server data via renderMap)
         // We initialize it here as a static group for Physics
         this.treesGroup = this.physics.add.staticGroup();
+
+        // 2.6 NPC Group
+        this.npcGroup = this.add.group();
+
 
 
         // 3. Setup Input
@@ -446,6 +456,19 @@ export class MainScene extends Phaser.Scene {
             }
         }
 
+        // Animate NPCs
+        for (const [nid, container] of Object.entries(this.npcs)) {
+            const sprite = container.list[1];
+            if (container.lastMoveTime && (this.time.now - container.lastMoveTime < 150)) {
+                const t = this.time.now * 0.02; // Faster bobbing for smaller creatures
+                sprite.y = Math.abs(Math.sin(t)) * -4;
+                sprite.rotation = Math.sin(t) * 0.15;
+            } else {
+                sprite.y = 0;
+                sprite.rotation = 0;
+            }
+        }
+
         // Emit movement if changed (Compare with LAST FRAME)
         if (this.lastX === undefined) {
             this.lastX = this.playerContainer.x;
@@ -453,33 +476,73 @@ export class MainScene extends Phaser.Scene {
         }
 
         if (Math.abs(this.playerContainer.x - this.lastX) > 0.1 || Math.abs(this.playerContainer.y - this.lastY) > 0.1) {
-            // console.log(`Pos Changed`);
             if (this.socketManager) {
                 this.socketManager.emitMove(this.playerContainer.x, this.playerContainer.y);
             }
-
-            // Update last known position
             this.lastX = this.playerContainer.x;
             this.lastY = this.playerContainer.y;
         }
 
-        // Update Debug Text (HTML Overlay)
+        // Update Debug Text
         const debugEl = document.getElementById('debug-log');
         if (debugEl) {
             const myId = (this.socketManager && this.socketManager.socket) ? this.socketManager.socket.id : 'No Socket';
             const othersCount = Object.keys(this.otherPlayers).length;
             const inputStr = `L:${left ? 1 : 0} R:${right ? 1 : 0} U:${up ? 1 : 0} D:${down ? 1 : 0}`;
             const posStr = `X:${Math.round(this.playerContainer.x)} Y:${Math.round(this.playerContainer.y)}`;
-
             debugEl.innerText = `[v2.5D Loaded]\nID: ${myId}\nOthers: ${othersCount}\nLastMove: ${window.lastMoveDebug || 'None'}\nFPS: ${Math.round(this.game.loop.actualFps)}\nInput: ${inputStr}\nPos: ${posStr}`;
         }
 
-        // Update Minimap
         this.updateMinimap();
-
-        // Apply Depth Sorting
         this.updateDepth();
     }
+
+    initNPCs(npcData) {
+        Object.values(this.npcs).forEach(n => n.destroy());
+        this.npcs = {};
+
+        npcData.forEach(data => {
+            const container = this.add.container(data.x, data.y);
+            const shadow = this.add.ellipse(0, 10, 16, 8, 0x000000, 0.2);
+            const textureKey = data.type === 'roach' ? 'npc_roach' : 'npc_sheep';
+
+            let sprite;
+            if (this.textures.exists(textureKey)) {
+                sprite = this.add.image(0, 0, textureKey);
+            } else {
+                const color = data.type === 'roach' ? 0x4e342e : 0xffffff;
+                sprite = this.add.rectangle(0, 0, 32, 32, color);
+            }
+
+            sprite.setOrigin(0.5, 0.5);
+            // Larger NPCs (approx 85% of player size)
+            sprite.displayWidth = 42;
+            sprite.scaleY = sprite.scaleX;
+
+            container.add([shadow, sprite]);
+            this.npcs[data.id] = container;
+            this.npcGroup.add(container);
+        });
+        console.log(`Initialized ${npcData.length} NPCs.`);
+    }
+
+    updateNPCPositions(updates) {
+        for (const [nid, pos] of Object.entries(updates)) {
+            const container = this.npcs[nid];
+            if (container) {
+                const prevX = container.x;
+                container.setPosition(pos.x, pos.y);
+                container.lastMoveTime = this.time.now;
+
+                const sprite = container.list[1];
+                if (sprite && sprite.setFlipX) {
+                    if (pos.x < prevX) sprite.setFlipX(true);
+                    else if (pos.x > prevX) sprite.setFlipX(false);
+                }
+            }
+        }
+    }
+
 
     updateMinimap() {
         if (!this.minimapConfig || !this.minimapPlayerDot) return;

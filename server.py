@@ -6,8 +6,20 @@ import socketio
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 
 # 2. Wrap with ASGI Application
-app = FastAPI()
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start NPC loop
+    print("Server: Starting NPC movement loop...")
+    asyncio.create_task(update_npcs_loop())
+    yield
+    # Shutdown logic (optional)
+    print("Server: Shutting down...")
+
+app = FastAPI(lifespan=lifespan)
 socket_app = socketio.ASGIApp(sio, app)
+
 
 # 3. Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -27,7 +39,9 @@ import random
 import sqlite3
 import os
 import json
+import math
 from datetime import datetime, timedelta, timezone
+
 
 MAP_DIR = 'db/map'
 MAP_FILE = os.path.join(MAP_DIR, 'forest.json')
@@ -38,10 +52,41 @@ SAFE_RADIUS = 150
 TREE_COUNT = 60
 world_trees = []
 
+# NPC Data
+NPC_COUNT = 10
+npcs = {}
+NPC_TYPES = ['roach', 'sheep']
+
+def init_npcs():
+    global npcs
+    for i in range(NPC_COUNT):
+        npc_id = f"npc_{i}"
+        npc_type = random.choice(NPC_TYPES)
+        npcs[npc_id] = {
+            'id': npc_id,
+            'type': npc_type,
+            'x': random.randint(-MAP_SIZE, MAP_SIZE),
+            'y': random.randint(-MAP_SIZE, MAP_SIZE),
+            'target_x': 0,
+            'target_y': 0,
+            'speed': 2.0 if npc_type == 'roach' else 1.0,
+            'last_move': 0
+        }
+        # Set initial target
+        npcs[npc_id]['target_x'] = npcs[npc_id]['x'] + random.randint(-100, 100)
+        npcs[npc_id]['target_y'] = npcs[npc_id]['y'] + random.randint(-100, 100)
+
+init_npcs()
+
 # Database setup
-DB_PATH = 'guestbook.db'
+DB_PATH = 'db/guestbook.db'
 
 def init_db():
+    # Ensure directory exists
+    db_dir = os.path.dirname(DB_PATH)
+    if not os.path.exists(db_dir):
+        os.makedirs(db_dir)
+        
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     # Note: timestamp column exists from previous schema (DATETIME DEFAULT CURRENT_TIMESTAMP)
@@ -99,8 +144,8 @@ def load_or_generate_map():
         while True:
             x = random.randint(-MAP_SIZE, MAP_SIZE)
             y = random.randint(-MAP_SIZE, MAP_SIZE)
-            import math
             dist = math.hypot(x, y)
+
             if dist > SAFE_RADIUS:
                 world_trees.append({'x': x, 'y': y})
                 break
@@ -114,6 +159,35 @@ def load_or_generate_map():
         print(f"Failed to save map: {e}")
 
 load_or_generate_map()
+
+import asyncio
+
+async def update_npcs_loop():
+    while True:
+        updates = {}
+        for nid, npc in npcs.items():
+            # Move towards target
+            dx = npc['target_x'] - npc['x']
+            dy = npc['target_y'] - npc['y']
+            dist = math.hypot(dx, dy)
+            
+            if dist < 5:
+                # Pick new target
+                npc['target_x'] = max(-MAP_SIZE, min(MAP_SIZE, npc['x'] + random.randint(-200, 200)))
+                npc['target_y'] = max(-MAP_SIZE, min(MAP_SIZE, npc['y'] + random.randint(-200, 200)))
+            else:
+                # Move
+                speed = npc['speed'] * (2.0 if npc['type'] == 'roach' else 1.2) # Faster movement
+                npc['x'] += (dx / dist) * speed
+                npc['y'] += (dy / dist) * speed
+            
+            updates[nid] = {'x': npc['x'], 'y': npc['y']}
+        
+        await sio.emit('npcs_moved', updates)
+        await asyncio.sleep(0.1) # 10 FPS sync
+
+# Removed old on_event startup logic
+
 
 
 @sio.event
@@ -141,8 +215,12 @@ async def connect(sid, environ):
     messages = get_messages_from_db()
     await sio.emit('guestbook_data', messages, to=sid)
     
+    # Send NPC Data
+    await sio.emit('npc_data', list(npcs.values()), to=sid)
+    
     # Tell everyone else about the new guy
     await sio.emit('new_player', {'sid': sid, 'player': players[sid]})
+
     print(f"Broadcasted new_player and map_data for {sid}")
 
 @sio.event

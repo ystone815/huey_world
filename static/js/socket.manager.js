@@ -66,6 +66,17 @@ export class SocketManager {
             this.updateGuestbookUI(messages);
         });
 
+        // NPC data from server
+        this.socket.on('npc_data', (npcs) => {
+            console.log("Socket: Received npc_data", npcs);
+            this.scene.initNPCs(npcs);
+        });
+
+        // NPCs moved
+        this.socket.on('npcs_moved', (updates) => {
+            this.scene.updateNPCPositions(updates);
+        });
+
         // New Guestbook post
         this.socket.on('new_guestbook_post', (post) => {
             console.log("Socket: New guestbook post", post);
