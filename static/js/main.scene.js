@@ -311,8 +311,22 @@ export class MainScene extends Phaser.Scene {
             minimapSize,
             0x111111,
             0.8
-        ).setScrollFactor(0);
+        ).setScrollFactor(0).setInteractive();
         minimapBg.setStrokeStyle(2, 0x444444);
+
+        this.isMinimapExpanded = false;
+        minimapBg.on('pointerdown', () => {
+            this.isMinimapExpanded = !this.isMinimapExpanded;
+            const targetScale = this.isMinimapExpanded ? 2.0 : 1.0;
+
+            this.tweens.add({
+                targets: this.minimapContainer,
+                scaleX: targetScale,
+                scaleY: targetScale,
+                duration: 200,
+                ease: 'Power2'
+            });
+        });
 
         // Minimap border glow
         const minimapBorder = this.add.rectangle(

@@ -62,8 +62,8 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - **Ambient**: Transitions between Midnight (Dark), Dawn (Purple), Noon (Bright), and Dusk (Orange).
     - **Clock**: 24-hour digital clock display below the minimap.
 12. **Enhanced Minimap Visibility**:
-    - **Trees**: Displayed as dark green static dots (radius 1.5).
-    - **NPCs**: Displayed as yellow dynamic dots (radius 2) that sync with their world movement.
+    - **Trees & NPCs**: Displayed as dots on the map.
+    - **Click-to-Expand**: Clicking the minimap background toggles its size (animated transition) for better visibility.
     - **Players**: Green (self) and Orange (others) dots.
 12. **Character Refinements**:
     - **Panda Skin Fix**: Restored opacity (Alpha 255) to 30,000+ white fur pixels.
