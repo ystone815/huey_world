@@ -182,8 +182,38 @@ export class MainScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(1000).setVisible(false);
 
         // Listen for external join event (from HTML UI)
-        this.events.on('request-join', (name) => {
-            this.joinGame(name);
+        this.events.on('request-join', (data) => {
+            this.joinGame(data);
+        });
+
+        // Nickname Validation Success
+        this.events.on('nickname-success', (data) => {
+            this.isJoined = true;
+            this.nickname = data.nickname;
+            this.selectedSkin = data.skin;
+
+            if (this.player && this.selectedSkin) {
+                this.player.setTexture(this.selectedSkin);
+                this.player.displayWidth = 48;
+                this.player.scaleY = this.player.scaleX;
+                this.player.setOrigin(0.5, 0.5);
+            }
+            this.playerText.setText(this.nickname);
+
+            // Notify HTML UI
+            window.dispatchEvent(new CustomEvent('lobby-hide'));
+
+            // Show Online List
+            const listPanel = document.getElementById('online-list-panel');
+            if (listPanel) listPanel.style.display = 'block';
+
+            this.updateOnlineList();
+        });
+
+        // Nickname Validation Error
+        this.events.on('nickname-error', (data) => {
+            // Forward to HTML UI
+            window.dispatchEvent(new CustomEvent('nickname-error', { detail: data.message }));
         });
 
         // 2.5 Setup Environment (Trees - now handled by server data via renderMap)
@@ -852,8 +882,6 @@ export class MainScene extends Phaser.Scene {
 
 
     joinGame(data) {
-        if (this.isJoined) return;
-
         // Handle both string (old) and object (new)
         if (typeof data === 'string') {
             this.nickname = data;
@@ -863,33 +891,20 @@ export class MainScene extends Phaser.Scene {
             this.selectedSkin = data.skin || 'skin_fox';
         }
 
-        this.playerText.setText(this.nickname);
-        if (this.player && this.selectedSkin) {
-            this.player.setTexture(this.selectedSkin);
-
-            // Scale to 48px width, maintain aspect ratio
-            this.player.displayWidth = 48;
-            this.player.scaleY = this.player.scaleX;
-
-            this.player.setOrigin(0.5, 0.5); // Ensure center origin
-        }
-
-        this.isJoined = true;
-
-
-
-
-
-
-        // Show Online List
-        const listPanel = document.getElementById('online-list-panel');
-        if (listPanel) listPanel.style.display = 'block';
-
-        try {
-            this.socketManager = new SocketManager(this);
-            // SocketManager auto-connects and will emit 'set_nickname' on connect if we pass it
-        } catch (e) {
-            console.error("SocketManager Init Failed:", e);
+        // Initialize socket if not already done
+        if (!this.socketManager) {
+            try {
+                this.socketManager = new SocketManager(this);
+            } catch (e) {
+                console.error("SocketManager Init Failed:", e);
+                window.dispatchEvent(new CustomEvent('nickname-error', { detail: "Server connection failed" }));
+            }
+        } else {
+            // If already connected, just emit the new nickname
+            this.socketManager.socket.emit('set_nickname', {
+                nickname: this.nickname,
+                skin: this.selectedSkin
+            });
         }
     }
 

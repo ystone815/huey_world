@@ -251,20 +251,38 @@ async def set_nickname(sid, data):
     if sid in players:
         # Check if internal data is a dict or just a string
         if isinstance(data, dict):
-            name = data.get('nickname', 'Unknown')
+            name = data.get('nickname', 'Unknown').strip()
             skin = data.get('skin', 'skin_fox')
-            players[sid]['nickname'] = name
-            players[sid]['skin'] = skin
         else:
-            name = data
-            players[sid]['nickname'] = name
+            name = data.strip()
+            skin = 'skin_fox'
+
+        # Nickname validation: Uniqueness check
+        is_duplicate = False
+        for other_sid, other_player in players.items():
+            if other_sid != sid and other_player.get('nickname', '').lower() == name.lower():
+                is_duplicate = True
+                break
+        
+        if is_duplicate:
+            print(f"Server: Rejected duplicate nickname '{name}' from {sid}")
+            await sio.emit('nickname_error', {'message': 'Nickname already taken!'}, to=sid)
+            return
+
+        # If unique, update
+        players[sid]['nickname'] = name
+        players[sid]['skin'] = skin
             
-        print(f"Server: Player joined/updated: {sid} -> {players[sid]['nickname']} ({players[sid]['skin']})")
+        print(f"Server: Player joined/updated: {sid} -> {name} ({skin})")
+        
+        # Notify success to the client that requested it
+        await sio.emit('nickname_success', {'nickname': name, 'skin': skin}, to=sid)
+
         # Broadcast update to ALL players
         await sio.emit('update_player_info', {
             'sid': sid, 
-            'nickname': players[sid]['nickname'],
-            'skin': players[sid]['skin']
+            'nickname': name,
+            'skin': skin
         })
 
 

@@ -406,6 +406,7 @@
                 </div>
             </div>
 
+            <div id="nickname-error" style="color: #ff4444; margin-bottom: 15px; font-weight: bold; font-size: 14px; display: none;"></div>
             <button id="join-btn">JOIN WORLD</button>
 
         </div>
@@ -448,19 +449,19 @@
             });
         });
 
-        document.getElementById('join-btn').addEventListener('click', () => {
-            const nickInput = document.getElementById('nickname-input');
+        const joinBtn = document.getElementById('join-btn');
+        const nickError = document.getElementById('nickname-error');
+        const nickInput = document.getElementById('nickname-input');
+
+        joinBtn.addEventListener('click', () => {
             const nickname = nickInput.value.trim() || "Player";
- 
-             // Fade out lobby
-             const lobby = document.getElementById('lobby-overlay');
-             lobby.style.opacity = '0';
-             setTimeout(() => {
-                 lobby.style.display = 'none';
-             }, 500);
- 
+            
+            // UI Feedback
+            joinBtn.disabled = true;
+            joinBtn.innerText = "JOINING...";
+            nickError.style.display = 'none';
+
              // Tell Phaser to join
-             // We need to wait for the game/scene to be ready
              const checkGame = setInterval(() => {
                  if (window.phaserGame && window.phaserGame.scene.getScene('MainScene')) {
                      const scene = window.phaserGame.scene.getScene('MainScene');
@@ -468,6 +469,24 @@
                      clearInterval(checkGame);
                  }
              }, 100);
+        });
+
+        // Event: Lobby Hide (on success)
+        window.addEventListener('lobby-hide', () => {
+            const lobby = document.getElementById('lobby-overlay');
+            lobby.style.opacity = '0';
+            setTimeout(() => {
+                lobby.style.display = 'none';
+            }, 500);
+        });
+
+        // Event: Nickname Error
+        window.addEventListener('nickname-error', (e) => {
+            nickError.innerText = e.detail || "Nickname already taken!";
+            nickError.style.display = 'block';
+            
+            joinBtn.disabled = false;
+            joinBtn.innerText = "JOIN WORLD";
         });
 
 

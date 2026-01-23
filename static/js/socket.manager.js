@@ -37,6 +37,18 @@ export class SocketManager {
 
         });
 
+        // Nickname Validation Success
+        this.socket.on('nickname_success', (data) => {
+            console.log("Socket: Nickname accepted:", data.nickname);
+            this.scene.events.emit('nickname-success', data);
+        });
+
+        // Nickname Validation Error (Duplicate)
+        this.socket.on('nickname_error', (data) => {
+            console.log("Socket: Nickname rejected:", data.message);
+            this.scene.events.emit('nickname-error', data);
+        });
+
         // Initialize existing players
         this.socket.on('current_players', (players) => {
             console.log("Socket: Received current_players", players);
