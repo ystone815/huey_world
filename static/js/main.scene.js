@@ -195,8 +195,18 @@ export class MainScene extends Phaser.Scene {
 
 
 
-        // 3. Setup Input
-        this.wasd = this.input.keyboard.addKeys('W,A,S,D');
+        // 3. Setup Input (WASD + Arrows)
+        this.controls = this.input.keyboard.addKeys({
+            up: Phaser.Input.Keyboard.KeyCodes.W,
+            down: Phaser.Input.Keyboard.KeyCodes.S,
+            left: Phaser.Input.Keyboard.KeyCodes.A,
+            right: Phaser.Input.Keyboard.KeyCodes.D,
+            up2: Phaser.Input.Keyboard.KeyCodes.UP,
+            down2: Phaser.Input.Keyboard.KeyCodes.DOWN,
+            left2: Phaser.Input.Keyboard.KeyCodes.LEFT,
+            right2: Phaser.Input.Keyboard.KeyCodes.RIGHT
+        });
+        console.log("Controls Initialized: WASD + Arrows");
 
         // 4. Virtual Joystick (Dynamic / Floating)
         console.log("Preparing Dynamic Joystick...");
@@ -436,10 +446,10 @@ export class MainScene extends Phaser.Scene {
         body.setVelocity(0);
 
         // Combined Input (Keyboard + Joystick)
-        let left = this.wasd.A.isDown;
-        let right = this.wasd.D.isDown;
-        let up = this.wasd.W.isDown;
-        let down = this.wasd.S.isDown;
+        let left = this.controls.left.isDown || this.controls.left2.isDown;
+        let right = this.controls.right.isDown || this.controls.right2.isDown;
+        let up = this.controls.up.isDown || this.controls.up2.isDown;
+        let down = this.controls.down.isDown || this.controls.down2.isDown;
 
         if (this.joyCursors) {
             left = left || this.joyCursors.left.isDown;
