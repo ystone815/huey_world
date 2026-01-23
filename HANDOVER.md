@@ -8,8 +8,9 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 ## 🚀 Current Technical State
 - **Core Stack**:
   - **Frontend**: Phaser 3, Socket.IO Client.
-  - **Backend**: Python (FastAPI, python-socketio), Uvicorn, **SQLite (Guestbook persistence)**.
+  - **Backend**: Python (FastAPI, python-socketio), Uvicorn, **SQLite (Guestbook)**, **JSON (Map Persistence)**.
   - **Plugins**: Rex Virtual Joystick (for mobile support).
+
 
 ---
 
@@ -40,6 +41,12 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - **Persistence**: Messages saved to `guestbook.db`.
     - **Real-time**: New posts broadcast to all connected players.
     - **Proximity Interaction**: Automatically opens if staying near for 2 seconds (Mobile friendly).
+7.  **Map Persistence**:
+    - World trees are saved to `db/map/forest.json`.
+    - Server loads existing map on startup or generates a new one if missing.
+8.  **Interactive Objects**:
+    - **Bonfire**: Animated object at `(80, 50)` with flickering fire and ground glow.
+
 
 ---
 
@@ -52,8 +59,9 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 
 ## 🗺️ Next Steps (Roadmap)
 1.  **Gameplay**:
-    - [ ] **Collision System**: Add collision between players and trees.
+    - [x] **Collision System**: Add collision between players and trees.
     - [ ] **Emoji System**: Keybound emotes (e.g., NumKeys 1-4) shown above character.
+
 2.  **Social**:
     - [ ] **Chat System**: Simple global chat box.
 3.  **UI/UX**:
@@ -65,6 +73,10 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 - **World Map Sync**: Server-side tree generation (Consistent map for all).
 - **Mobile Optimization**: Responsive Minimap, layout stacking, Proximity interaction.
 - **Guestbook**: Persistent message board with KST timestamps.
+- **Map Persistence**: File-based map system using JSON.
+- **Bonfire**: Animated scenery object near spawn.
+- **Collision System**: Solid tree trunks using Arcade Physics.
+
 
 ---
 

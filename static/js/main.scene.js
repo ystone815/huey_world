@@ -12,6 +12,8 @@ export class MainScene extends Phaser.Scene {
         // Load Assets
         this.load.image('character', 'static/assets/character.png');
         this.load.image('tree', 'static/assets/tree.png');
+        this.load.image('bonfire', 'static/assets/bonfire.png');
+
         this.load.image('ground', 'static/assets/ground.png');
     }
 
@@ -83,6 +85,49 @@ export class MainScene extends Phaser.Scene {
                 document.getElementById('guestbook-overlay').style.display = 'flex';
             }
         });
+
+        // 2.2.5 Bonfire (Near Spawn)
+        // Position: (80, 50) - A bit aside from 0,0
+        this.bonfire = this.add.sprite(80, 50, 'bonfire');
+        this.bonfire.setDisplaySize(48, 48); // Scale to match player roughly
+        this.bonfire.setOrigin(0.5, 0.7); // Anchor at bottom center
+        this.bonfire.setDepth(50); // Will be sorted by updateDepth later
+
+        // Add simple light/flicker effect
+        // 1. Scale Tween (Breathing)
+        this.tweens.add({
+            targets: this.bonfire,
+            scaleX: 1.05 * (48 / this.bonfire.width), // Relative scale adjustment
+            scaleY: 1.05 * (48 / this.bonfire.height),
+            duration: 500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        // 2. Alpha Tween (Flickering)
+        this.tweens.add({
+            targets: this.bonfire,
+            alpha: 0.8,
+            duration: 100,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Elastic.easeInOut'
+        });
+
+        // 3. Light Glow (Circle behind)
+        this.bonfireLight = this.add.circle(80, 50, 60, 0xffaa00, 0.2);
+        this.bonfireLight.setDisplaySize(80, 80);
+        this.tweens.add({
+            targets: this.bonfireLight,
+            alpha: 0.4,
+            scaleX: 1.2,
+            scaleY: 1.2,
+            duration: 300,
+            yoyo: true,
+            repeat: -1
+        });
+
 
         // 2.3 Proximity Interaction setup
         this.proximityTimer = 0;
@@ -470,6 +515,11 @@ export class MainScene extends Phaser.Scene {
 
             // Adjust depth
             child.setDepth(child.y);
+
+            // Special fix for bonfire light (should be on ground)
+            if (child === this.bonfireLight) {
+                child.setDepth(this.bonfire.y - 1);
+            }
         });
     }
 

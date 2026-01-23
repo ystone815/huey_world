@@ -26,7 +26,12 @@ players = {}
 import random
 import sqlite3
 import os
+import json
 from datetime import datetime, timedelta, timezone
+
+MAP_DIR = 'db/map'
+MAP_FILE = os.path.join(MAP_DIR, 'forest.json')
+
 
 MAP_SIZE = 900
 SAFE_RADIUS = 150
@@ -71,8 +76,24 @@ def get_messages_from_db():
 
 init_db()
 
-def generate_map():
+def load_or_generate_map():
     global world_trees
+    
+    # Ensure directory exists
+    if not os.path.exists(MAP_DIR):
+        os.makedirs(MAP_DIR)
+        
+    # Implement persistence
+    if os.path.exists(MAP_FILE):
+        try:
+            with open(MAP_FILE, 'r', encoding='utf-8') as f:
+                world_trees = json.load(f)
+            print(f"Loaded map with {len(world_trees)} trees from {MAP_FILE}.")
+            return
+        except Exception as e:
+            print(f"Failed to load map: {e}. Regenerating...")
+
+    # Generate if not found or failed
     world_trees = []
     for _ in range(TREE_COUNT):
         while True:
@@ -83,9 +104,17 @@ def generate_map():
             if dist > SAFE_RADIUS:
                 world_trees.append({'x': x, 'y': y})
                 break
-    print(f"Generated map with {len(world_trees)} trees.")
+    
+    # Save to file
+    try:
+        with open(MAP_FILE, 'w', encoding='utf-8') as f:
+            json.dump(world_trees, f, indent=2)
+        print(f"Generated and saved map with {len(world_trees)} trees to {MAP_FILE}.")
+    except Exception as e:
+        print(f"Failed to save map: {e}")
 
-generate_map()
+load_or_generate_map()
+
 
 @sio.event
 async def connect(sid, environ):
