@@ -46,36 +46,41 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - Server loads existing map on startup or generates a new one if missing.
 8.  **Interactive Objects**:
     - **Bonfire**: Animated object at `(80, 50)` with flickering fire and ground glow.
-
+9.  **Character Selection System**:
+    - 4 unique skins: Fox, Cyber-Cat, Shi-Dog, Panda-Mage.
+    - Lobby UI for selection with real-time sync across players.
+    - High-quality pixel art with refined transparency and proportional scaling.
 
 ---
 
 ## ⚠️ Known Issues
 1.  **Connection Handshake**:
     - Occasionally players might get stuck on "Connecting..." if the server restarts. A refresh usually fixes this.
-    - Logic for `join_game` is now robust, ensuring current players are loaded correctly.
 
 ---
 
-## 🗺️ Next Steps (Roadmap)
-1.  **Gameplay**:
-    - [x] **Collision System**: Add collision between players and trees.
-    - [ ] **Emoji System**: Keybound emotes (e.g., NumKeys 1-4) shown above character.
+## 🗺️ Next Steps (Brainstormed Ideas)
+1.  **Visual Juice**:
+    - [ ] **Day/Night System**: Dynamic lighting that changes with time.
+    - [ ] **Particle Effects**: Dust on walking, fire sparks, rain/snow.
+    - [ ] **Environmental Life**: Butterflies or squirrels that react to players.
+2.  **Social & Expression**:
+    - [ ] **Emoji Popups**: Numbers 1-4 triggers emoji bubbles above head (High Priority).
+    - [ ] **Global Chat**: Real-time communication bar.
+    - [ ] **Titles**: Achievement-based labels (e.g., "Fire Keeper").
+3.  **Gamification**:
+    - [ ] **Collectibles**: Gathering acorns or flowers in the woods.
+    - [ ] **Pets**: Small companions following the player.
+4.  **Audio**:
+    - [ ] **BGM/SFX**: Atmospheric forest music and walking sound effects.
 
-2.  **Social**:
-    - [ ] **Chat System**: Simple global chat box.
-3.  **UI/UX**:
-    - [ ] **Custom Character**: Allow choosing colors/skins in Lobby.
+## ✅ Completed in this Session (Latest)
+- **Character Selection**: Grid-based skin choosing with 4 unique assets.
+- **Sprite Refinement**: Specialized transparency and padding cleanup for all skins.
+- **Collision & Navigation**: Physics-based tree collisions and improved joystick feel.
+- **Map Persistence**: JSON-based world state handling.
+- **Multiplayer Sync**: Fixed character flipping and scaling issues for all skins.
 
-## ✅ Completed in this Session
-- **Lobby Screen**: HTML Overlay instead of `prompt()`.
-- **Character Animations**: Procedural "Bobbing" walk animation.
-- **World Map Sync**: Server-side tree generation (Consistent map for all).
-- **Mobile Optimization**: Responsive Minimap, layout stacking, Proximity interaction.
-- **Guestbook**: Persistent message board with KST timestamps.
-- **Map Persistence**: File-based map system using JSON.
-- **Bonfire**: Animated scenery object near spawn.
-- **Collision System**: Solid tree trunks using Arcade Physics.
 
 
 ---
