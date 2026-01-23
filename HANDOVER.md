@@ -5,7 +5,8 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 
 
 ## Rules
-- Git commit과 push는 유저가 요청할때에만 수행할것.
+1. Git commit과 push는 유저가 요청할때에만 수행할것.
+2. *.js 파일은 수정한 이후에 문법 오류가 없는지 꼭 체크할 것.
 
 ---
 
@@ -28,9 +29,10 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - **Background**: Seamless dirt ground tile (no borders).
     - **Safe Zone**: `150px` radius at the center (no trees spawn here).
 3.  **Movement & Physics**: 
-    - Combined Keyboard (Cursors) + Virtual Joystick input.
-    - **Directional Flip**: Character sprite flips left/right based on movement direction.
+    - **Quadrant-Limited Dynamic Joystick**: Active only in the bottom-left quadrant (3rd quadrant) to keep the right side free for interactions.
+    - **Joystick Scale**: Reduced radius to `30px` for a compact UI.
     - Physics: Arcade Physics with world bound collision.
+
 4.  **Visuals**:
     - **Y-Sorting**: Custom `updateDepth()` ensures characters appear behind trees when "above" them.
     - **Asset Scaling**: Character scaled to `48x48`, Trees to `96x96`.
@@ -93,7 +95,9 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 - **NPC System**: Added wandering Roach and Sheep with server-side logic and multiplayer sync.
 - **Panda Skin Fix**: Restored opacity to white fur areas via custom processing script.
 - **Lighting Refinement**: Doubled bonfire range (400px), removed player self-light, and darkened night phase.
+- **Input Refinement**: Implemented quadrant-limited dynamic joystick with reduced size (30px) for better UX.
 - **Bug Fixes**: Resolved `math` import errors and syntax issues in `main.scene.js`.
+
 
 
 

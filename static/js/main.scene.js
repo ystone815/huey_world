@@ -220,54 +220,63 @@ export class MainScene extends Phaser.Scene {
         }
 
         if (plugin) {
-            // Create the joystick but hide it initially
-            // Note: UI elements must look like UI (High Depth, ScrollFactor 0)
-            const baseObj = this.add.circle(0, 0, 60, 0x888888, 0.5)
-                .setDepth(100)
+            // Create a DYNAMIC joystick but only active in a certain area
+            const radius = 30; // Half of previous 60
+            const baseObj = this.add.circle(0, 0, radius, 0x888888, 0.5)
+                .setDepth(1100)
                 .setScrollFactor(0);
 
-            const thumbObj = this.add.circle(0, 0, 30, 0xcccccc, 0.8)
-                .setDepth(101)
+            const thumbObj = this.add.circle(0, 0, radius / 2, 0xcccccc, 0.8)
+                .setDepth(1101)
                 .setScrollFactor(0);
 
             this.joyStick = plugin.add(this, {
                 x: 0,
                 y: 0,
-                radius: 60,
+                radius: radius,
                 base: baseObj,
                 thumb: thumbObj,
                 dir: '8dir',
-                forceMin: 16,
-                enable: false // Start disabled
+                forceMin: 6, // Adjusted for smaller scale
+                enable: false // Disable until valid touch
             });
+
+
 
             this.joyStick.setVisible(false);
             this.joyCursors = this.joyStick.createCursorKeys();
 
-            // Input handlers for "Floating" behavior
+            // Limited Dynamic Joystick Logic
             this.input.on('pointerdown', (pointer) => {
-                this.joyStick.setPosition(pointer.x, pointer.y);
-                this.joyStick.setVisible(true);
-                this.joyStick.setEnable(true);
+                if (!this.isJoined) return;
+
+                // Check for Bottom-Left Quadrant (3rd Quadrant)
+                const isBottomLeft = pointer.x < this.scale.width / 2 && pointer.y > this.scale.height / 2;
+
+                if (isBottomLeft) {
+                    this.joyStick.setPosition(pointer.x, pointer.y);
+                    this.joyStick.setVisible(true);
+                    this.joyStick.setEnable(true);
+                }
             });
 
-            this.input.on('pointerup', (pointer) => {
+            this.input.on('pointerup', () => {
                 this.joyStick.setVisible(false);
                 this.joyStick.setEnable(false);
             });
 
-            console.log("Dynamic Joystick Configured");
-
+            console.log("Quadrant-Limited Dynamic Joystick Configured");
         } else {
+
             console.error("Rex Joystick Plugin could not be loaded.");
             this.add.text(10, 50, "PLUGIN FAIL", { fill: '#f00' })
                 .setScrollFactor(0).setDepth(100);
         }
 
-        // 5. Create Minimap (Top-Right Corner)
+        // 5. Create Minimap
         this.createMinimap();
-
     }
+
 
     createMinimap() {
         // Detect mobile
@@ -343,19 +352,10 @@ export class MainScene extends Phaser.Scene {
             offsetY: minimapSize / 2
         };
 
-        // Label
-        const minimapLabel = this.add.text(
-            minimapSize / 2,
-            minimapSize + 8,
-            'MINIMAP',
-            { font: '10px Arial', fill: '#888888' }
-        ).setOrigin(0.5, 0).setScrollFactor(0);
-        this.minimapContainer.add(minimapLabel);
-
-        // Time Clock Text (Below Label)
+        // Time Clock Text (Below Minimap)
         this.minimapTimeText = this.add.text(
             minimapSize / 2,
-            minimapSize + 22,
+            minimapSize + 5,
             '12:00',
             { font: 'bold 14px Consolas, monospace', fill: '#ffffff' }
         ).setOrigin(0.5, 0).setScrollFactor(0);
@@ -788,6 +788,10 @@ export class MainScene extends Phaser.Scene {
         }
 
         this.isJoined = true;
+
+        // Joystick is dynamic, no need to show it here. 
+        // It will appear on touch in the bottom-left quadrant.
+
 
 
 
