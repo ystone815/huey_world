@@ -61,6 +61,10 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - **Lighting**: Phaser 2D Light pipeline enabled for all sprites.
     - **Ambient**: Transitions between Midnight (Dark), Dawn (Purple), Noon (Bright), and Dusk (Orange).
     - **Clock**: 24-hour digital clock display below the minimap.
+12. **Enhanced Minimap Visibility**:
+    - **Trees**: Displayed as dark green static dots (radius 1.5).
+    - **NPCs**: Displayed as yellow dynamic dots (radius 2) that sync with their world movement.
+    - **Players**: Green (self) and Orange (others) dots.
 12. **Character Refinements**:
     - **Panda Skin Fix**: Restored opacity (Alpha 255) to 30,000+ white fur pixels.
 
@@ -99,7 +103,8 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 - **Lighting Refinement**: Doubled bonfire range (400px), removed player self-light, and darkened night phase.
 - **Input Refinement**: Implemented quadrant-limited dynamic joystick with reduced size (30px).
 - **Camera Zoom**: Added automatic mobile-zoom detection and manual UI controls for field-of-view adjustment (REMOVED: User requested removal due to functionality issues).
-- **Bug Fixes**: Resolved `math` import errors and syntax issues in `main.scene.js`.
+- **Minimap Enhancement**: Added trees (dark green) and NPCs (yellow) to the minimap with real-time sync for entities.
+- **Bug Fixes**: Resolved syntax errors and code duplication in `main.scene.js`.
 
 
 

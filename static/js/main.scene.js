@@ -347,6 +347,8 @@ export class MainScene extends Phaser.Scene {
 
         // Other players container (for minimap dots)
         this.minimapOtherDots = {};
+        this.minimapTreeDots = [];
+        this.minimapNpcDots = {};
 
         // Add all elements to container
         this.minimapContainer.add([minimapBorder, minimapBg, safeZone, this.minimapPlayerDot]);
@@ -613,11 +615,15 @@ export class MainScene extends Phaser.Scene {
 
     }
 
-
-
     initNPCs(npcData) {
         Object.values(this.npcs).forEach(n => n.destroy());
         this.npcs = {};
+
+        // Minimap Sync
+        if (this.minimapNpcDots) {
+            Object.values(this.minimapNpcDots).forEach(d => d.destroy());
+            this.minimapNpcDots = {};
+        }
 
         npcData.forEach(data => {
             const container = this.add.container(data.x, data.y);
@@ -643,7 +649,20 @@ export class MainScene extends Phaser.Scene {
 
             container.add([shadow, sprite]);
             this.npcs[data.id] = container;
-            this.npcGroup.add(container);
+            if (this.npcGroup) this.npcGroup.add(container);
+
+            // Add to minimap
+            if (this.minimapConfig) {
+                const { scale } = this.minimapConfig;
+                const dot = this.add.circle(
+                    (data.x + 1000) * scale,
+                    (data.y + 1000) * scale,
+                    2,
+                    0xffff00
+                );
+                this.minimapContainer.add(dot);
+                this.minimapNpcDots[data.id] = dot;
+            }
         });
         console.log(`Initialized ${npcData.length} NPCs.`);
     }
@@ -692,11 +711,29 @@ export class MainScene extends Phaser.Scene {
             this.minimapOtherDots[sid].setPosition(otherX, otherY);
         }
 
+        // Update NPC positions on minimap
+        for (const [nid, container] of Object.entries(this.npcs)) {
+            const dot = this.minimapNpcDots[nid];
+            if (dot) {
+                const dotX = (container.x + 1000) * scale;
+                const dotY = (container.y + 1000) * scale;
+                dot.setPosition(dotX, dotY);
+            }
+        }
+
         // Remove dots for disconnected players
         for (const sid of Object.keys(this.minimapOtherDots)) {
             if (!this.otherPlayers[sid]) {
                 this.minimapOtherDots[sid].destroy();
                 delete this.minimapOtherDots[sid];
+            }
+        }
+
+        // Cleanup NPC dots
+        for (const nid of Object.keys(this.minimapNpcDots)) {
+            if (!this.npcs[nid]) {
+                this.minimapNpcDots[nid].destroy();
+                delete this.minimapNpcDots[nid];
             }
         }
     }
@@ -734,6 +771,12 @@ export class MainScene extends Phaser.Scene {
             this.treesGroup = this.physics.add.staticGroup();
         }
 
+        // Clear minimap trees
+        if (this.minimapTreeDots) {
+            this.minimapTreeDots.forEach(d => d.destroy());
+            this.minimapTreeDots = [];
+        }
+
         trees.forEach(t => {
             // Create tree as part of the physics group
             const tree = this.treesGroup.create(t.x, t.y, 'tree');
@@ -760,6 +803,19 @@ export class MainScene extends Phaser.Scene {
             // We want body center to be at (48, 86).
             // With size 20x20, top-left of body should be roughly (38, 76).
             tree.body.setOffset(38, 70);
+
+            // Add to minimap
+            if (this.minimapConfig) {
+                const { scale } = this.minimapConfig;
+                const dot = this.add.circle(
+                    (t.x + 1000) * scale,
+                    (t.y + 1000) * scale,
+                    1.5,
+                    0x004400
+                );
+                this.minimapContainer.add(dot);
+                this.minimapTreeDots.push(dot);
+            }
         });
 
         // Add Collider between Player and Trees
@@ -768,8 +824,8 @@ export class MainScene extends Phaser.Scene {
         }
 
         console.log(`Rendered ${trees.length} trees from server with collision.`);
-
     }
+
 
     joinGame(data) {
         if (this.isJoined) return;
