@@ -101,7 +101,7 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 - **NPC System**: Added wandering Roach and Sheep with server-side logic and multiplayer sync.
 - **Panda Skin Fix**: Restored opacity to white fur areas via custom processing script.
 - **Lighting Refinement**: Doubled bonfire range (400px), removed player self-light, and darkened night phase.
-- **Input Refinement**: Implemented quadrant-limited dynamic joystick with reduced size (30px).
+- **Input Refinement**: Implemented quadrant-limited dynamic joystick (30px) and switched desktop controls to WASD.
 - **Camera Zoom**: Added automatic mobile-zoom detection and manual UI controls for field-of-view adjustment (REMOVED: User requested removal due to functionality issues).
 - **Minimap Enhancement**: Added trees (dark green) and NPCs (yellow) to the minimap with real-time sync for entities.
 - **Bug Fixes**: Resolved syntax errors and code duplication in `main.scene.js`.

@@ -196,7 +196,7 @@ export class MainScene extends Phaser.Scene {
 
 
         // 3. Setup Input
-        this.cursors = this.input.keyboard.createCursorKeys();
+        this.wasd = this.input.keyboard.addKeys('W,A,S,D');
 
         // 4. Virtual Joystick (Dynamic / Floating)
         console.log("Preparing Dynamic Joystick...");
@@ -436,10 +436,10 @@ export class MainScene extends Phaser.Scene {
         body.setVelocity(0);
 
         // Combined Input (Keyboard + Joystick)
-        let left = this.cursors.left.isDown;
-        let right = this.cursors.right.isDown;
-        let up = this.cursors.up.isDown;
-        let down = this.cursors.down.isDown;
+        let left = this.wasd.A.isDown;
+        let right = this.wasd.D.isDown;
+        let up = this.wasd.W.isDown;
+        let down = this.wasd.S.isDown;
 
         if (this.joyCursors) {
             left = left || this.joyCursors.left.isDown;
