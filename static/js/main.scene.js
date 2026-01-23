@@ -100,7 +100,10 @@ export class MainScene extends Phaser.Scene {
         });
 
         // 2.5 Setup Environment (Trees - now handled by server data via renderMap)
-        this.treesGroup = this.add.group();
+        // 2.5 Setup Environment (Trees - now handled by server data via renderMap)
+        // We initialize it here as a static group for Physics
+        this.treesGroup = this.physics.add.staticGroup();
+
 
         // 3. Setup Input
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -480,17 +483,42 @@ export class MainScene extends Phaser.Scene {
         if (this.treesGroup) {
             this.treesGroup.clear(true, true);
         } else {
-            this.treesGroup = this.add.group();
+            this.treesGroup = this.physics.add.staticGroup();
         }
 
         trees.forEach(t => {
-            const tree = this.add.image(t.x, t.y, 'tree');
+            // Create tree as part of the physics group
+            const tree = this.treesGroup.create(t.x, t.y, 'tree');
+
+            // Visuals
             tree.setOrigin(0.5, 0.9);
             tree.setDisplaySize(96, 96);
-            tree.setDepth(t.y);
-            this.treesGroup.add(tree);
+            tree.setDepth(t.y); // Y-sort immediately
+
+            // Physics Body (Trunk only)
+            // Tree is 96x96. Trunk is roughly at the bottom center.
+            // We want a small box at the base.
+            tree.refreshBody(); // Sync physics with display size/origin
+
+            // Adjust body size to be smaller (the trunk)
+            // Width: 20, Height: 20
+            tree.body.setSize(20, 20);
+
+            // Offset needs to be calculated based on the origin (0.5, 0.9) and size
+            // Default body is top-left of the texture.
+            // Texture is 96x96. Center x is 48. Anchor y is 0.9 * 96 = ~86.
+            // We want body center to be at (48, 86).
+            // With size 20x20, top-left of body should be roughly (38, 76).
+            tree.body.setOffset(38, 70);
         });
-        console.log(`Rendered ${trees.length} trees from server.`);
+
+        // Add Collider between Player and Trees
+        if (this.playerContainer) {
+            this.physics.add.collider(this.playerContainer, this.treesGroup);
+        }
+
+        console.log(`Rendered ${trees.length} trees from server with collision.`);
+
     }
 
     joinGame(name) {
