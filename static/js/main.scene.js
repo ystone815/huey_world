@@ -67,6 +67,33 @@ export class MainScene extends Phaser.Scene {
         this.cameras.main.startFollow(this.playerContainer);
         this.cameras.main.setBounds(-1000, -1000, 2000, 2000);
 
+        // 2.2 Create Bulletin Board Object
+        // Positioned about 10 steps away (approx 300px) to avoid spawn overlap
+        this.board = this.add.container(300, -50);
+        const boardBase = this.add.rectangle(0, 0, 40, 60, 0x5d4037);
+        const boardTop = this.add.rectangle(0, -10, 50, 40, 0x8d6e63).setStrokeStyle(2, 0x5d4037);
+        const boardText = this.add.text(0, -10, "📜", { fontSize: '20px' }).setOrigin(0.5);
+        const boardLabel = this.add.text(0, 25, "GUESTBOOK", { font: '10px Arial', align: 'center' }).setOrigin(0.5);
+        this.board.add([boardBase, boardTop, boardText, boardLabel]);
+        this.board.setSize(50, 80);
+        this.board.setInteractive(new Phaser.Geom.Rectangle(-25, -40, 50, 80), Phaser.Geom.Rectangle.Contains);
+
+        this.board.on('pointerdown', () => {
+            if (this.isJoined) {
+                document.getElementById('guestbook-overlay').style.display = 'flex';
+            }
+        });
+
+        // 2.3 Proximity Interaction setup
+        this.proximityTimer = 0;
+        this.isProximityOpen = false;
+        this.proximityLabel = this.add.text(0, 0, "", {
+            font: 'bold 14px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#000000bb',
+            padding: { x: 8, y: 4 }
+        }).setOrigin(0.5).setDepth(1000).setVisible(false);
+
         // Listen for external join event (from HTML UI)
         this.events.on('request-join', (name) => {
             this.joinGame(name);
@@ -303,6 +330,36 @@ export class MainScene extends Phaser.Scene {
         } else if (down) {
             body.setVelocityY(speed);
             isWalking = true;
+        }
+
+        // --- GUESTBOOK PROXIMITY INTERACTION ---
+        if (this.board && this.isJoined) {
+            const dist = Phaser.Math.Distance.Between(this.playerContainer.x, this.playerContainer.y, this.board.x, this.board.y);
+
+            if (dist < 70) {
+                if (!this.isProximityOpen && !document.getElementById('guestbook-overlay').style.display.includes('flex')) {
+                    this.proximityTimer += this.game.loop.delta;
+                    this.proximityLabel.setVisible(true);
+                    this.proximityLabel.setPosition(this.board.x, this.board.y - 70);
+
+                    const timeLeft = Math.max(0, (2000 - this.proximityTimer) / 1000).toFixed(1);
+                    this.proximityLabel.setText(`Reading... ${timeLeft}s`);
+
+                    if (this.proximityTimer >= 2000) {
+                        document.getElementById('guestbook-overlay').style.display = 'flex';
+                        this.isProximityOpen = true;
+                        this.proximityLabel.setVisible(false);
+                        this.proximityTimer = 0;
+                    }
+                }
+            } else {
+                this.proximityTimer = 0;
+                this.proximityLabel.setVisible(false);
+                // Reset "already opened" flag when moving far away
+                if (dist > 120) {
+                    this.isProximityOpen = false;
+                }
+            }
         }
 
         // --- PROCEDURAL ANIMATION (Bobbing) ---

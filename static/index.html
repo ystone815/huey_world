@@ -204,6 +204,110 @@
         .status-other {
             background: #ff6600;
         }
+
+        /* Guestbook Overlay */
+        #guestbook-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .guestbook-content {
+            background: #8d6e63;
+            /* Brown wooden color */
+            border: 8px solid #5d4037;
+            border-radius: 10px;
+            padding: 20px;
+            width: 80%;
+            max-width: 500px;
+            max-height: 80%;
+            display: flex;
+            flex-direction: column;
+            color: #fff;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+
+        .guestbook-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #5d4037;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .guestbook-header h2 {
+            margin: 0;
+            color: #ffecb3;
+        }
+
+        .close-gb {
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffecb3;
+        }
+
+        #guestbook-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        .gb-item {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .gb-nick {
+            font-weight: bold;
+            color: #ffcc00;
+        }
+
+        .gb-msg {
+            word-wrap: break-word;
+        }
+
+        .gb-time {
+            font-size: 10px;
+            color: #ccc;
+            display: block;
+        }
+
+        .gb-input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        #gb-input {
+            flex-grow: 1;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            background: #fff;
+            color: #2d2d2d;
+        }
+
+        #gb-send {
+            padding: 10px 20px;
+            background: #ffcc00;
+            border: none;
+            border-radius: 5px;
+            color: #2d2d2d;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
     <!-- Socket.IO -->
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
@@ -243,6 +347,23 @@
         <div id="log-container"></div>
     </div>
 
+    <!-- Guestbook Overlay -->
+    <div id="guestbook-overlay">
+        <div class="guestbook-content">
+            <div class="guestbook-header">
+                <h2>📜 방명록 (Guestbook)</h2>
+                <span class="close-gb" id="close-gb">×</span>
+            </div>
+            <div id="guestbook-list">
+                <!-- Messages go here -->
+            </div>
+            <div class="gb-input-area">
+                <input type="text" id="gb-input" placeholder="글을 남겨주세요!" maxlength="100">
+                <button id="gb-send">작성</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Game Scripts -->
     <script type="module" src="static/js/game.js"></script>
     <script>
@@ -273,6 +394,29 @@
         document.getElementById('nickname-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 document.getElementById('join-btn').click();
+            }
+        });
+
+        // Guestbook UI Bridge
+        document.getElementById('close-gb').addEventListener('click', () => {
+            document.getElementById('guestbook-overlay').style.display = 'none';
+        });
+
+        document.getElementById('gb-send').addEventListener('click', () => {
+            const input = document.getElementById('gb-input');
+            const msg = input.value.trim();
+            if (msg) {
+                if (window.phaserGame) {
+                    const scene = window.phaserGame.scene.getScene('MainScene');
+                    scene.socketManager.socket.emit('add_guestbook_post', { message: msg });
+                    input.value = '';
+                }
+            }
+        });
+
+        document.getElementById('gb-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('gb-send').click();
             }
         });
     </script>

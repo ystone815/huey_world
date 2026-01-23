@@ -8,7 +8,7 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 ## 🚀 Current Technical State
 - **Core Stack**:
   - **Frontend**: Phaser 3, Socket.IO Client.
-  - **Backend**: Python (FastAPI, python-socketio), Uvicorn.
+  - **Backend**: Python (FastAPI, python-socketio), Uvicorn, **SQLite (Guestbook persistence)**.
   - **Plugins**: Rex Virtual Joystick (for mobile support).
 
 ---
@@ -35,6 +35,11 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
       - **Sync indicators**: Green dot (Me), Orange dots (Others), Green circle (Safe zone).
       - Fixed issue with duplicate minimaps.
     - **Debug Overlay**: Shows FPS, Position, Input, and Socket ID.
+6.  **Guestbook (Bulletin Board)**:
+    - Located at `(300, -50)` (Use Proximity or Click to open).
+    - **Persistence**: Messages saved to `guestbook.db`.
+    - **Real-time**: New posts broadcast to all connected players.
+    - **Proximity Interaction**: Automatically opens if staying near for 2 seconds (Mobile friendly).
 
 ---
 
@@ -46,17 +51,20 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 ---
 
 ## 🗺️ Next Steps (Roadmap)
-Prioritized list of features to implement next:
-
 1.  **Gameplay**:
     - [ ] **Collision System**: Add collision between players and trees.
     - [ ] **Emoji System**: Keybound emotes (e.g., NumKeys 1-4) shown above character.
-    - [ ] **Animations**: Idle/Walk sprite animations.
 2.  **Social**:
     - [ ] **Chat System**: Simple global chat box.
 3.  **UI/UX**:
-    - [ ] **Lobby Screen**: Proper nickname input UI before joining game.
-    - [ ] **Online List**: Show list of currently connected players.
+    - [ ] **Custom Character**: Allow choosing colors/skins in Lobby.
+
+## ✅ Completed in this Session
+- **Lobby Screen**: HTML Overlay instead of `prompt()`.
+- **Character Animations**: Procedural "Bobbing" walk animation.
+- **World Map Sync**: Server-side tree generation (Consistent map for all).
+- **Mobile Optimization**: Responsive Minimap, layout stacking, Proximity interaction.
+- **Guestbook**: Persistent message board with KST timestamps.
 
 ---
 

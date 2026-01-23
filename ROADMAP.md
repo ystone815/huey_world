@@ -57,6 +57,10 @@
 ## 📋 완료된 작업
 
 - [x] 미니맵 구현 (2026-01-21)
+- [x] 로비 화면 구현 (HTML Overlay)
+- [x] 캐릭터 애니메이션 (Procedural Bobbing)
+- [x] 방명록 시스템 (SQLite, Proximity Interaction)
+- [x] 모바일 최적화 (반응형 UI)
   - 오른쪽 상단 150x150px
   - 내 플레이어: 초록 점
   - 다른 플레이어: 주황 점

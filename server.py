@@ -24,10 +24,52 @@ players = {}
 
 # Game World Data (Trees)
 import random
+import sqlite3
+import os
+from datetime import datetime, timedelta, timezone
+
 MAP_SIZE = 900
 SAFE_RADIUS = 150
 TREE_COUNT = 60
 world_trees = []
+
+# Database setup
+DB_PATH = 'guestbook.db'
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    # Note: timestamp column exists from previous schema (DATETIME DEFAULT CURRENT_TIMESTAMP)
+    # We will explicit insert timestamp now, so schema change isn't strictly necessary for new rows.
+    c.execute('''CREATE TABLE IF NOT EXISTS messages
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  nickname TEXT, 
+                  message TEXT, 
+                  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    conn.commit()
+    conn.close()
+
+def get_kst_now_str():
+    # UTC+9
+    now_kst = datetime.now(timezone.utc) + timedelta(hours=9)
+    return now_kst.strftime('%Y-%m-%d %H:%M:%S')
+
+def add_message_to_db(nickname, message, timestamp_str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT INTO messages (nickname, message, timestamp) VALUES (?, ?, ?)", (nickname, message, timestamp_str))
+    conn.commit()
+    conn.close()
+
+def get_messages_from_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT nickname, message, timestamp FROM messages ORDER BY id DESC LIMIT 50")
+    rows = c.fetchall()
+    conn.close()
+    return [{'nickname': r[0], 'message': r[1], 'timestamp': r[2]} for r in rows]
+
+init_db()
 
 def generate_map():
     global world_trees
@@ -64,6 +106,10 @@ async def connect(sid, environ):
     # Send Map Data (Trees)
     await sio.emit('map_data', world_trees, to=sid)
     
+    # Send Guestbook Data
+    messages = get_messages_from_db()
+    await sio.emit('guestbook_data', messages, to=sid)
+    
     # Tell everyone else about the new guy
     await sio.emit('new_player', {'sid': sid, 'player': players[sid]})
     print(f"Broadcasted new_player and map_data for {sid}")
@@ -76,6 +122,19 @@ async def set_nickname(sid, name):
         # Broadcast update (reuse new_player or create player_update event, reusing new_player for simplicity or just ignoring for now until reload)
         # Broadcast to ALL players (including self for confirmation)
         await sio.emit('update_player_info', {'sid': sid, 'nickname': name})
+
+@sio.event
+async def add_guestbook_post(sid, data):
+    if sid in players:
+        nickname = players[sid]['nickname']
+        message = data.get('message', '').strip()
+        if message:
+            print(f"Guestbook Post: {nickname}: {message}")
+            timestamp = get_kst_now_str()
+            add_message_to_db(nickname, message, timestamp)
+            # Broadcast to everyone
+            new_post = {'nickname': nickname, 'message': message, 'timestamp': timestamp}
+            await sio.emit('new_guestbook_post', new_post)
 
 @sio.event
 async def disconnect(sid):

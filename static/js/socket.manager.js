@@ -56,6 +56,18 @@ export class SocketManager {
             this.scene.renderMap(trees);
         });
 
+        // Guestbook data initial load
+        this.socket.on('guestbook_data', (messages) => {
+            console.log("Socket: Received guestbook_data", messages);
+            this.updateGuestbookUI(messages);
+        });
+
+        // New Guestbook post
+        this.socket.on('new_guestbook_post', (post) => {
+            console.log("Socket: New guestbook post", post);
+            this.addSinglePostToUI(post);
+        });
+
         // New player joined
         this.socket.on('new_player', (data) => {
             console.log("Socket: new_player", data);
@@ -161,5 +173,31 @@ export class SocketManager {
         }
         // console.log("Emitting Move:", x, y); // Verbose
         this.socket.emit('player_move', { x, y });
+    }
+
+    updateGuestbookUI(messages) {
+        const list = document.getElementById('guestbook-list');
+        if (!list) return;
+        list.innerHTML = '';
+        messages.forEach(m => this.addSinglePostToUI(m, true));
+    }
+
+    addSinglePostToUI(post, append = false) {
+        const list = document.getElementById('guestbook-list');
+        if (!list) return;
+
+        const item = document.createElement('div');
+        item.className = 'gb-item';
+        item.innerHTML = `
+            <span class="gb-nick">${post.nickname}:</span>
+            <span class="gb-msg">${post.message}</span>
+            <span class="gb-time">${post.timestamp}</span>
+        `;
+
+        if (append) {
+            list.appendChild(item);
+        } else {
+            list.prepend(item);
+        }
     }
 }
