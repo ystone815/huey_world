@@ -280,37 +280,8 @@ export class MainScene extends Phaser.Scene {
         this.cameras.main.setZoom(1.0);
 
 
-        // 7. Zoom Controls (Hidden until joined)
-        this.createZoomControls();
     }
 
-    createZoomControls() {
-        // Top-Right Position
-        this.zoomContainer = this.add.container(this.scale.width - 50, 50)
-            .setScrollFactor(0).setDepth(2000).setVisible(false);
-
-
-        const createBtn = (y, text, callback) => {
-            const bg = this.add.circle(0, y, 20, 0x000000, 0.6).setInteractive();
-            const txt = this.add.text(0, y, text, { fontSize: '24px', fontStyle: 'bold' }).setOrigin(0.5);
-            bg.on('pointerdown', callback);
-            bg.on('pointerover', () => bg.setFillStyle(0x444444, 0.8));
-            bg.on('pointerout', () => bg.setFillStyle(0x000000, 0.6));
-            return [bg, txt];
-        };
-
-        const [plusBg, plusTxt] = createBtn(0, '+', () => {
-            const z = Math.min(this.cameras.main.zoom + 0.1, 1.5);
-            this.cameras.main.setZoom(z);
-        });
-
-        const [minusBg, minusTxt] = createBtn(50, '-', () => {
-            const z = Math.max(this.cameras.main.zoom - 0.1, 0.5);
-            this.cameras.main.setZoom(z);
-        });
-
-        this.zoomContainer.add([plusBg, plusTxt, minusBg, minusTxt]);
-    }
 
 
 
@@ -825,10 +796,6 @@ export class MainScene extends Phaser.Scene {
 
         this.isJoined = true;
 
-        // Show UI Elements
-        if (this.zoomContainer) {
-            this.zoomContainer.setVisible(true);
-        }
 
 
 
