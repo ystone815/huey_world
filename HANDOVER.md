@@ -62,7 +62,12 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - **Ambient**: Transitions between Midnight (Dark), Dawn (Purple), Noon (Bright), and Dusk (Orange).
     - **Clock**: 24-hour digital clock display below the minimap.
 12. **Character Refinements**:
-    - **Panda Skin Fix**: Restored opacity (Alpha 255) to 30,000+ white fur pixels that were accidentally transparent.
+    - **Panda Skin Fix**: Restored opacity (Alpha 255) to 30,000+ white fur pixels.
+13. **Camera Zoom System**:
+    - **Defaults**: Starts at `1.0x` zoom for all devices.
+    - **Manual Controls**: `+` and `-` buttons in the top-right corner for manual zoom adjustment (0.5x to 1.5x).
+
+
 
 
 ---
@@ -95,8 +100,10 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 - **NPC System**: Added wandering Roach and Sheep with server-side logic and multiplayer sync.
 - **Panda Skin Fix**: Restored opacity to white fur areas via custom processing script.
 - **Lighting Refinement**: Doubled bonfire range (400px), removed player self-light, and darkened night phase.
-- **Input Refinement**: Implemented quadrant-limited dynamic joystick with reduced size (30px) for better UX.
+- **Input Refinement**: Implemented quadrant-limited dynamic joystick with reduced size (30px).
+- **Camera Zoom**: Added automatic mobile-zoom detection and manual UI controls for field-of-view adjustment.
 - **Bug Fixes**: Resolved `math` import errors and syntax issues in `main.scene.js`.
+
 
 
 
