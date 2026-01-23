@@ -125,8 +125,10 @@ async def connect(sid, environ):
         'x': random.randint(-100, 100),
         'y': random.randint(-100, 100),
         'color': f'#{random.randint(0, 0xFFFFFF):06x}',
-        'nickname': 'Unknown'
+        'nickname': 'Unknown',
+        'skin': 'skin_fox'
     }
+
     print(f"Assigning {sid} -> {players[sid]}")
 
     # Send current players to the new guy
@@ -144,13 +146,26 @@ async def connect(sid, environ):
     print(f"Broadcasted new_player and map_data for {sid}")
 
 @sio.event
-async def set_nickname(sid, name):
+async def set_nickname(sid, data):
     if sid in players:
-        print(f"Server: set_nickname for {sid} -> {name}")
-        players[sid]['nickname'] = name
-        # Broadcast update (reuse new_player or create player_update event, reusing new_player for simplicity or just ignoring for now until reload)
-        # Broadcast to ALL players (including self for confirmation)
-        await sio.emit('update_player_info', {'sid': sid, 'nickname': name})
+        # Check if internal data is a dict or just a string
+        if isinstance(data, dict):
+            name = data.get('nickname', 'Unknown')
+            skin = data.get('skin', 'skin_fox')
+            players[sid]['nickname'] = name
+            players[sid]['skin'] = skin
+        else:
+            name = data
+            players[sid]['nickname'] = name
+            
+        print(f"Server: Player joined/updated: {sid} -> {players[sid]['nickname']} ({players[sid]['skin']})")
+        # Broadcast update to ALL players
+        await sio.emit('update_player_info', {
+            'sid': sid, 
+            'nickname': players[sid]['nickname'],
+            'skin': players[sid]['skin']
+        })
+
 
 @sio.event
 async def add_guestbook_post(sid, data):

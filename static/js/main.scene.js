@@ -9,9 +9,13 @@ export class MainScene extends Phaser.Scene {
         // Load the plugin formally via Phaser Loader to ensure it's ready
         this.load.plugin('rexvirtualjoystickplugin', 'static/js/vendor/rexvirtualjoystickplugin.min.js', true);
 
-        // Load Assets
         this.load.image('character', 'static/assets/character.png');
+        this.load.image('skin_fox', 'static/assets/skin_fox.png');
+        this.load.image('skin_cat', 'static/assets/skin_cat.png');
+        this.load.image('skin_dog', 'static/assets/skin_dog.png');
+        this.load.image('skin_panda', 'static/assets/skin_panda.png');
         this.load.image('tree', 'static/assets/tree.png');
+
         this.load.image('bonfire', 'static/assets/bonfire.png');
 
         this.load.image('ground', 'static/assets/ground.png');
@@ -315,8 +319,10 @@ export class MainScene extends Phaser.Scene {
         const container = this.add.container(playerInfo.x, playerInfo.y);
 
         const shadow = this.add.ellipse(0, 15, 24, 12, 0x000000, 0.3);
-        const otherPlayer = this.add.image(0, 0, 'character');
+        const skinKey = playerInfo.skin || 'skin_fox';
+        const otherPlayer = this.add.image(0, 0, skinKey);
         otherPlayer.setDisplaySize(48, 48);
+
 
         let color = playerInfo.color;
         if (typeof color === 'string' && color.startsWith('#')) {
@@ -571,11 +577,24 @@ export class MainScene extends Phaser.Scene {
 
     }
 
-    joinGame(name) {
+    joinGame(data) {
         if (this.isJoined) return;
-        this.nickname = name || "Player";
+
+        // Handle both string (old) and object (new)
+        if (typeof data === 'string') {
+            this.nickname = data;
+            this.selectedSkin = 'skin_fox';
+        } else {
+            this.nickname = data.nickname || "Player";
+            this.selectedSkin = data.skin || 'skin_fox';
+        }
+
         this.playerText.setText(this.nickname);
+        if (this.player && this.selectedSkin) {
+            this.player.setTexture(this.selectedSkin);
+        }
         this.isJoined = true;
+
 
         // Show Online List
         const listPanel = document.getElementById('online-list-panel');

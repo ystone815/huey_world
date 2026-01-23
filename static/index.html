@@ -152,6 +152,54 @@
             transform: translateY(1px);
         }
 
+        /* Character Selection */
+        .character-selection {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+            width: 100%;
+        }
+
+        .skin-option {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .skin-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.05);
+        }
+
+        .skin-option.selected {
+            border-color: #ffcc00;
+            background: rgba(255, 204, 0, 0.2);
+            box-shadow: 0 0 15px rgba(255, 204, 0, 0.3);
+        }
+
+        .skin-preview {
+            width: 48px;
+            height: 48px;
+            image-rendering: pixelated;
+            object-fit: contain;
+        }
+
+        .skin-label {
+            font-size: 11px;
+            color: #ddd;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+
         /* Online List Panel */
         #online-list-panel {
             position: absolute;
@@ -338,7 +386,28 @@
             <div class="input-group">
                 <input type="text" id="nickname-input" placeholder="Enter Nickname" maxlength="12">
             </div>
+
+            <div class="character-selection">
+                <div class="skin-option selected" data-skin="skin_fox">
+                    <img src="static/assets/skin_fox.png" class="skin-preview">
+                    <span class="skin-label">FOX</span>
+                </div>
+                <div class="skin-option" data-skin="skin_cat">
+                    <img src="static/assets/skin_cat.png" class="skin-preview">
+                    <span class="skin-label">CAT</span>
+                </div>
+                <div class="skin-option" data-skin="skin_dog">
+                    <img src="static/assets/skin_dog.png" class="skin-preview">
+                    <span class="skin-label">DOG</span>
+                </div>
+                <div class="skin-option" data-skin="skin_panda">
+                    <img src="static/assets/skin_panda.png" class="skin-preview">
+                    <span class="skin-label">PANDA</span>
+                </div>
+            </div>
+
             <button id="join-btn">JOIN WORLD</button>
+
         </div>
     </div>
 
@@ -368,27 +437,39 @@
     <script type="module" src="static/js/game.js"></script>
     <script>
         // UI Logic to bridge with Phaser
+        let selectedSkin = 'skin_fox';
+
+        // Add selection logic
+        document.querySelectorAll('.skin-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                document.querySelectorAll('.skin-option').forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                selectedSkin = opt.dataset.skin;
+            });
+        });
+
         document.getElementById('join-btn').addEventListener('click', () => {
             const nickInput = document.getElementById('nickname-input');
             const nickname = nickInput.value.trim() || "Player";
-
-            // Fade out lobby
-            const lobby = document.getElementById('lobby-overlay');
-            lobby.style.opacity = '0';
-            setTimeout(() => {
-                lobby.style.display = 'none';
-            }, 500);
-
-            // Tell Phaser to join
-            // We need to wait for the game/scene to be ready
-            const checkGame = setInterval(() => {
-                if (window.phaserGame && window.phaserGame.scene.getScene('MainScene')) {
-                    const scene = window.phaserGame.scene.getScene('MainScene');
-                    scene.events.emit('request-join', nickname);
-                    clearInterval(checkGame);
-                }
-            }, 100);
+ 
+             // Fade out lobby
+             const lobby = document.getElementById('lobby-overlay');
+             lobby.style.opacity = '0';
+             setTimeout(() => {
+                 lobby.style.display = 'none';
+             }, 500);
+ 
+             // Tell Phaser to join
+             // We need to wait for the game/scene to be ready
+             const checkGame = setInterval(() => {
+                 if (window.phaserGame && window.phaserGame.scene.getScene('MainScene')) {
+                     const scene = window.phaserGame.scene.getScene('MainScene');
+                     scene.events.emit('request-join', { nickname, skin: selectedSkin });
+                     clearInterval(checkGame);
+                 }
+             }, 100);
         });
+
 
         // Allow 'Enter' key to join
         document.getElementById('nickname-input').addEventListener('keypress', (e) => {

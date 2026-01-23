@@ -27,10 +27,14 @@ export class SocketManager {
         this.socket.on('connect', () => {
             console.log("Socket connected:", this.socket.id);
             this.addLog("Connected to server!");
-            // Send nickname once connected
+            // Send nickname and skin once connected
             if (this.scene.nickname) {
-                this.socket.emit('set_nickname', this.scene.nickname);
+                this.socket.emit('set_nickname', {
+                    nickname: this.scene.nickname,
+                    skin: this.scene.selectedSkin || 'skin_fox'
+                });
             }
+
         });
 
         // Initialize existing players
@@ -100,7 +104,16 @@ export class SocketManager {
                         console.log(`Socket: Updating text for ${data.sid} to ${data.nickname}`);
                         textObj.setText(data.nickname);
 
-                        this.addLog(`${data.nickname} updated info.`);
+                        // Also update skin if provided
+                        if (data.skin) {
+                            const sprite = container.list[1];
+                            if (sprite && sprite.setTexture) {
+                                sprite.setTexture(data.skin);
+                            }
+                        }
+
+                        this.addLog(`${data.nickname} joined/updated.`);
+
                     } else {
                         console.warn(`Socket: nicknameText object not found for ${data.sid}. List length: ${container.list.length}`);
                         // Fallback to List[2] if name not found (for old objects)
