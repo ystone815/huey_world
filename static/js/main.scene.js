@@ -322,6 +322,8 @@ export class MainScene extends Phaser.Scene {
         const skinKey = playerInfo.skin || 'skin_fox';
         const otherPlayer = this.add.image(0, 0, skinKey);
         otherPlayer.setDisplaySize(48, 48);
+        otherPlayer.setOrigin(0.5, 0.5); // Ensure center origin for flipping
+
 
 
         let color = playerInfo.color;
@@ -592,8 +594,11 @@ export class MainScene extends Phaser.Scene {
         this.playerText.setText(this.nickname);
         if (this.player && this.selectedSkin) {
             this.player.setTexture(this.selectedSkin);
+            this.player.setDisplaySize(48, 48); // Re-apply size
+            this.player.setOrigin(0.5, 0.5); // Ensure center origin
         }
         this.isJoined = true;
+
 
 
         // Show Online List

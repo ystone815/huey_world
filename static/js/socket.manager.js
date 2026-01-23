@@ -109,6 +109,7 @@ export class SocketManager {
                             const sprite = container.list[1];
                             if (sprite && sprite.setTexture) {
                                 sprite.setTexture(data.skin);
+                                sprite.setDisplaySize(48, 48); // Re-apply fixed size
                             }
                         }
 
