@@ -317,7 +317,7 @@ export class MainScene extends Phaser.Scene {
         this.isMinimapExpanded = false;
         minimapBg.on('pointerdown', () => {
             this.isMinimapExpanded = !this.isMinimapExpanded;
-            const targetScale = this.isMinimapExpanded ? 3.5 : 1.0;
+            const targetScale = this.isMinimapExpanded ? 3.0 : 1.0;
 
             this.tweens.add({
                 targets: this.minimapContainer,
