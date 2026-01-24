@@ -268,8 +268,8 @@ export class MainScene extends Phaser.Scene {
         });
 
         // Harvesting UI: Progress Bar
-        this.harvestBarBack = this.add.rectangle(0, 0, 60, 8, 0x000000, 0.7).setOrigin(0.5).setDepth(2000).setVisible(false);
-        this.harvestBarFill = this.add.rectangle(0, 0, 0, 6, 0xffaa00, 1).setOrigin(0, 0.5).setDepth(2001).setVisible(false);
+        this.harvestBarBack = this.add.rectangle(0, 0, 60, 8, 0x000000, 0.7).setOrigin(0.5).setDepth(5000).setVisible(false);
+        this.harvestBarFill = this.add.rectangle(0, 0, 0, 6, 0xffaa00, 1).setOrigin(0, 0.5).setDepth(5001).setVisible(false);
 
         // Harvesting UI: Prompt
         this.harvestPromptText = this.add.text(0, 0, "[SPACE] 채집하기 (Gather)", {
