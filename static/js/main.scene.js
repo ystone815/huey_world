@@ -52,17 +52,20 @@ export class MainScene extends Phaser.Scene {
         this.desertGround.setDepth(-999); // Slightly above ground to cover it
 
         // Smooth Transition Zones
-        // Snow to Forest transition (Y: -700 to -650)
+        // Snow to Forest transition (Y: -700 to -550)
         const snowTransition = this.add.graphics();
-        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 0.3, 0.3, 0, 0);
-        snowTransition.fillRect(-1000, -700, 2000, 50);
+        // Fade from solid white at the snow edge to transparent
+        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 1, 1, 0, 0);
+        snowTransition.fillRect(-1000, -700, 2000, 150);
         snowTransition.setDepth(-999);
         snowTransition.setPipeline('Light2D');
 
-        // Forest to Desert transition (Y: 700 to 750)
+        // Forest to Desert transition (Y: 550 to 700)
         const desertTransition = this.add.graphics();
-        desertTransition.fillGradientStyle(0xd2691e, 0xd2691e, 0xd2691e, 0xd2691e, 0, 0, 0.3, 0.3);
-        desertTransition.fillRect(-1000, 700, 2000, 50);
+        // Fade from transparent to solid desert color at the desert edge
+        // Desert ground color is roughly #d2691e
+        desertTransition.fillGradientStyle(0xd2691e, 0xd2691e, 0xd2691e, 0xd2691e, 0, 0, 1, 1);
+        desertTransition.fillRect(-1000, 550, 2000, 150);
         desertTransition.setDepth(-999);
         desertTransition.setPipeline('Light2D');
 
