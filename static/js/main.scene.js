@@ -28,7 +28,7 @@ export class MainScene extends Phaser.Scene {
 
         // NPCs
         this.load.image('npc_roach', 'static/assets/npc_roach.png');
-        this.load.image('npc_sheep', 'static/assets/npc_sheep.png');
+        this.load.image('npc_sheep', 'static/assets/npc_sheep2.png');
     }
 
 
