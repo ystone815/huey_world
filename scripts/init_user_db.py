@@ -29,10 +29,23 @@ CREATE TABLE IF NOT EXISTS sessions (
 )
 ''')
 
+# Create inventory table
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS inventory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    item_id TEXT NOT NULL,
+    quantity INTEGER DEFAULT 1,
+    slot_index INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+)
+''')
+
 # Create index for faster lookups
 cursor.execute('CREATE INDEX IF NOT EXISTS idx_username ON users(username)')
 cursor.execute('CREATE INDEX IF NOT EXISTS idx_token ON sessions(token)')
 cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_sessions ON sessions(user_id)')
+cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_inventory ON inventory(user_id)')
 
 conn.commit()
 conn.close()

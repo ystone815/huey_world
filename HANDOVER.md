@@ -174,6 +174,11 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
   - Created modern login/signup UI in `static/login.html`
   - Integrated authenticated data (nickname/skin) into the game join flow
   - Added logout functionality
+- **Personalized Inventory**:
+  - Implemented 40-slot persistent inventory system (SQLite based)
+  - Created mobile-friendly paged UI (20 slots x 2 pages) with "Next/Prev" navigation
+  - Added secure backend endpoints for inventory fetch and synchronization
+  - Integrated real-time UI updates on item collection
 - **Object Interaction**:
   - Implemented static physics collision for the bonfire and guestbook board
   - Character can no longer pass through these entities

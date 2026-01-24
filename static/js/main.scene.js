@@ -98,6 +98,27 @@ export class MainScene extends Phaser.Scene {
         this.npcs = {};
         this.isJoined = false;
 
+        // Inventory System
+        this.inventory = [];
+        this.token = localStorage.getItem('hueyworld_token');
+
+        // Harvesting System
+        this.harvestTarget = null;
+        this.isHarvesting = false;
+        this.harvestProgress = 0;
+        this.harvestDuration = 2000; // 2 seconds
+        this.harvestPromptActive = false;
+
+        // Items Mapping (Internal cache)
+        this.itemNames = {
+            'wood': 'Wood',
+            'forest_apple': 'Forest Apple',
+            'frozen_wood': 'Frozen Wood',
+            'snow_crystal': 'Snow Crystal',
+            'cactus_fiber': 'Cactus Fiber',
+            'desert_fruit': 'Desert Fruit'
+        };
+
         // Day/Night System
         this.worldTime = 0.5; // Default to Noon
         this.lights.enable().setAmbientColor(0xffffff);
@@ -115,7 +136,7 @@ export class MainScene extends Phaser.Scene {
         this.player = this.add.image(0, 0, 'character');
         this.player.setDisplaySize(48, 48); // Scale it nicely
 
-        this.playerText = this.add.text(0, -35, this.nickname, {
+        this.playerText = this.add.text(0, 35, this.nickname, {
             font: '14px Arial',
             fill: '#ffffff',
             align: 'center'
@@ -246,6 +267,25 @@ export class MainScene extends Phaser.Scene {
             this.joinGame(data);
         });
 
+        // Harvesting UI: Progress Bar
+        this.harvestBarBack = this.add.rectangle(0, 0, 60, 8, 0x000000, 0.7).setOrigin(0.5).setDepth(2000).setVisible(false);
+        this.harvestBarFill = this.add.rectangle(0, 0, 0, 6, 0x00ff00, 1).setOrigin(0, 0.5).setDepth(2001).setVisible(false);
+
+        // Harvesting UI: Prompt
+        this.harvestPromptText = this.add.text(0, 0, "[SPACE] 채집하기 (Gather)", {
+            font: 'bold 12px Arial',
+            fill: '#ffffff',
+            backgroundColor: '#00000088',
+            padding: { x: 5, y: 3 }
+        }).setOrigin(0.5).setDepth(2000).setVisible(false).setInteractive();
+
+        // Mobile Touch Trigger
+        this.harvestPromptText.on('pointerdown', () => {
+            if (this.harvestPromptActive && !this.isHarvesting) {
+                this.startHarvesting();
+            }
+        });
+
         // Nickname Validation Success
         this.events.on('nickname-success', (data) => {
             this.isJoined = true;
@@ -305,7 +345,8 @@ export class MainScene extends Phaser.Scene {
             key2: Phaser.Input.Keyboard.KeyCodes.TWO,
             key3: Phaser.Input.Keyboard.KeyCodes.THREE,
             key4: Phaser.Input.Keyboard.KeyCodes.FOUR,
-            inventory: Phaser.Input.Keyboard.KeyCodes.E
+            inventory: Phaser.Input.Keyboard.KeyCodes.E,
+            space: Phaser.Input.Keyboard.KeyCodes.SPACE
         }, false, false);
         console.log("Controls Initialized: WASD + Arrows + Emojis(1-4) + Inventory(E) (Capture Disabled)");
 
@@ -790,7 +831,7 @@ export class MainScene extends Phaser.Scene {
         }
         otherPlayer.setTint(color); // Keep tint for others to distinguish them
 
-        const otherText = this.add.text(0, -35, playerInfo.nickname || 'Unknown', {
+        const otherText = this.add.text(0, 35, playerInfo.nickname || 'Unknown', {
             font: '14px Arial',
             fill: '#ffffff',
             align: 'center'
@@ -809,7 +850,7 @@ export class MainScene extends Phaser.Scene {
         this.otherPlayers[sid] = container;
     }
 
-    update() {
+    update(time, delta) {
         if (!this.playerContainer) return;
 
         const speed = 200;
@@ -830,6 +871,20 @@ export class MainScene extends Phaser.Scene {
             this.updateEnvironmentColors();
             return;
         }
+
+        this.updateHarvesting(delta);
+
+        // Don't move if harvesting
+        if (this.isHarvesting) {
+            this.playerContainer.body.setVelocity(0);
+            this.updateMinimap();
+            this.updateDepth();
+            this.updateEnvironmentColors();
+            return;
+        }
+
+        this.checkTreeProximity();
+        this.handleNPCInteraction();
 
         // Combined Input (Keyboard + Joystick)
         let left = this.controls.left.isDown || this.controls.left2.isDown;
@@ -1286,6 +1341,101 @@ export class MainScene extends Phaser.Scene {
     }
 
 
+    async updateInventoryOnServer() {
+        if (!this.token) return;
+        try {
+            const response = await fetch('/api/inventory/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: this.token,
+                    items: this.inventory
+                })
+            });
+            if (!response.ok) throw new Error('Inventory sync failed');
+            console.log("Inventory synced to server.");
+        } catch (e) {
+            console.error("Inventory sync error:", e);
+        }
+    }
+
+    async fetchInventoryFromServer() {
+        if (!this.token) return;
+        try {
+            const response = await fetch('/api/inventory/get', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: this.token })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const rawInventory = data.inventory || [];
+
+                // Automatic Merge Logic (Retroactive fix for duplicates)
+                const merged = {};
+                rawInventory.forEach(item => {
+                    if (merged[item.item_id]) {
+                        merged[item.item_id].quantity += item.quantity;
+                    } else {
+                        merged[item.item_id] = { ...item };
+                    }
+                });
+
+                this.inventory = Object.values(merged);
+                console.log("Inventory loaded and merged:", this.inventory);
+
+                // If anything was merged, sync back to server
+                if (rawInventory.length !== this.inventory.length) {
+                    this.updateInventoryOnServer();
+                }
+
+                if (window.updateInventoryUI) window.updateInventoryUI();
+            }
+        } catch (e) {
+            console.error("Inventory fetch error:", e);
+        }
+    }
+
+    // Test helper for collection
+    addItem(itemId, qty = 1) {
+        // 1. Check if item already exists to stack
+        const existingItem = this.inventory.find(it => it.item_id === itemId);
+
+        if (existingItem) {
+            existingItem.quantity += qty;
+            console.log(`Stacked ${qty} ${itemId}. New total: ${existingItem.quantity}`);
+        } else {
+            // 2. If not existing, find first empty slot
+            const occupied = this.inventory.map(i => i.slot_index);
+            let targetSlot = -1;
+
+            for (let i = 0; i < 40; i++) {
+                if (!occupied.includes(i)) {
+                    targetSlot = i;
+                    break;
+                }
+            }
+
+            if (targetSlot === -1) {
+                console.warn("Inventory full!");
+                return false;
+            }
+
+            this.inventory.push({
+                item_id: itemId,
+                quantity: qty,
+                slot_index: targetSlot
+            });
+            console.log(`Added new item ${itemId} to slot ${targetSlot}`);
+        }
+
+        this.updateInventoryOnServer();
+        // Update UI if open
+        if (window.updateInventoryUI) window.updateInventoryUI();
+        return true;
+    }
+
     joinGame(data) {
         // Handle both string (old) and object (new)
         if (typeof data === 'string') {
@@ -1297,6 +1447,9 @@ export class MainScene extends Phaser.Scene {
             this.userData = data.userData; // New
             this.token = data.token;       // New
         }
+
+        // Fetch user inventory immediately
+        this.fetchInventoryFromServer();
 
         // Initialize socket if not already done
         if (!this.socketManager) {
@@ -1348,5 +1501,177 @@ export class MainScene extends Phaser.Scene {
         div.appendChild(span);
         return div;
     }
+
+    handleNPCInteraction() {
+        if (!this.isJoined || !this.playerContainer) return;
+
+        let nearestNPC = null;
+        let minDist = 60;
+
+        Object.values(this.npcs).forEach(npc => {
+            const dist = Phaser.Math.Distance.Between(
+                this.playerContainer.x, this.playerContainer.y,
+                npc.x, npc.y
+            );
+            if (dist < minDist) {
+                minDist = dist;
+                nearestNPC = npc;
+            }
+        });
+
+        if (nearestNPC && nearestNPC.isClickable) {
+            this.proximityLabel.text = `[E] ${nearestNPC.nickname}와 대화`;
+            this.proximityLabel.setPosition(this.playerContainer.x, this.playerContainer.y - 60);
+            this.proximityLabel.setVisible(true);
+            this.isProximityOpen = true;
+
+            if (Phaser.Input.Keyboard.JustDown(this.controls.inventory)) {
+                console.log("Interacting with NPC:", nearestNPC.nickname);
+                window.dispatchEvent(new CustomEvent('open-dialogue', { detail: nearestNPC.nickname }));
+            }
+        } else {
+            this.proximityLabel.setVisible(false);
+            this.isProximityOpen = false;
+        }
+    }
+
+    checkTreeProximity() {
+        if (!this.isJoined || !this.treesGroup || this.isHarvesting) {
+            if (this.harvestPromptText) this.harvestPromptText.setVisible(false);
+            this.harvestPromptActive = false;
+            return;
+        }
+
+        let nearestTree = null;
+        let minDist = 60;
+
+        this.treesGroup.getChildren().forEach(tree => {
+            if (!tree.visible) return; // Skip harvested trees on cooldown
+            const dist = Phaser.Math.Distance.Between(this.playerContainer.x, this.playerContainer.y, tree.x, tree.y);
+            if (dist < minDist) {
+                minDist = dist;
+                nearestTree = tree;
+            }
+        });
+
+        if (nearestTree) {
+            // If already harvesting this specific tree, just update the prompt position
+            if (this.harvestTarget === nearestTree && this.isHarvesting) {
+                this.harvestPromptText.setPosition(this.playerContainer.x, this.playerContainer.y - 60);
+                return;
+            }
+
+            // New tree target
+            this.harvestTarget = nearestTree;
+            this.harvestPromptText.setPosition(this.playerContainer.x, this.playerContainer.y - 60);
+            this.harvestPromptText.setText(`채집 중... (Harvesting...)`);
+            this.harvestPromptText.setVisible(true);
+            this.harvestPromptActive = true;
+
+            // Trigger start automatically
+            if (!this.isHarvesting) {
+                this.startHarvesting();
+            }
+        } else {
+            if (this.isHarvesting) {
+                this.cancelHarvesting();
+            }
+            this.harvestTarget = null;
+            this.harvestPromptText.setVisible(false);
+            this.harvestPromptActive = false;
+        }
+    }
+
+    updateHarvesting(delta) {
+        // Auto-harvesting: skip key check
+        if (this.isHarvesting && this.harvestTarget) {
+            this.harvestProgress += delta;
+
+            const progress = Math.min(this.harvestProgress / this.harvestDuration, 1);
+            this.harvestBarBack.setPosition(this.playerContainer.x, this.playerContainer.y - 45).setVisible(true);
+            this.harvestBarFill.setPosition(this.playerContainer.x - 29, this.playerContainer.y - 45).setVisible(true);
+            this.harvestBarFill.width = 58 * progress;
+            // No need to hide prompt, it shows "Harvesting..."
+
+            if (this.harvestProgress >= this.harvestDuration) {
+                this.completeHarvesting();
+                return; // Prevent null access below
+            }
+
+            // Only check distance if target still exists
+            if (this.harvestTarget) {
+                const dist = Phaser.Math.Distance.Between(this.playerContainer.x, this.playerContainer.y, this.harvestTarget.x, this.harvestTarget.y);
+                if (dist > 80) this.cancelHarvesting();
+            }
+        }
+    }
+
+    startHarvesting() {
+        this.isHarvesting = true;
+        this.harvestProgress = 0;
+    }
+
+    cancelHarvesting() {
+        this.isHarvesting = false;
+        this.harvestBarBack.setVisible(false);
+        this.harvestBarFill.setVisible(false);
+        this.harvestTarget = null;
+    }
+
+    completeHarvesting() {
+        if (!this.harvestTarget) return;
+
+        const treeType = this.harvestTarget.texture.key;
+        let loot = [];
+
+        if (treeType === 'tree') {
+            loot.push({ id: 'wood', qty: 1 });
+            if (Math.random() < 0.3) loot.push({ id: 'forest_apple', qty: 1 });
+        } else if (treeType === 'snow_tree') {
+            loot.push({ id: 'frozen_wood', qty: 1 });
+            if (Math.random() < 0.4) loot.push({ id: 'snow_crystal', qty: 1 });
+        } else if (treeType === 'cactus') {
+            loot.push({ id: 'cactus_fiber', qty: 1 });
+            if (Math.random() < 0.2) loot.push({ id: 'desert_fruit', qty: 1 });
+        }
+
+        loot.forEach(item => {
+            this.addItem(item.id, item.qty);
+            const itemName = (this.itemNames && this.itemNames[item.id]) ? this.itemNames[item.id] : item.id;
+            this.showFloatingNote(`+${item.qty} ${itemName}`);
+        });
+
+        const target = this.harvestTarget;
+        // Make it disappear and disable collision
+        target.setVisible(false);
+        if (target.body) target.body.enable = false;
+
+        this.time.delayedCall(60000, () => {
+            if (target && target.active) {
+                target.setVisible(true);
+                if (target.body) target.body.enable = true;
+            }
+        });
+
+        this.cancelHarvesting();
+    }
+
+    showFloatingNote(text) {
+        const note = this.add.text(this.playerContainer.x, this.playerContainer.y - 50, text, {
+            font: 'bold 16px Arial',
+            fill: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5).setDepth(3000);
+
+        this.tweens.add({
+            targets: note,
+            y: note.y - 100,
+            alpha: 0,
+            duration: 1500,
+            onComplete: () => note.destroy()
+        });
+    }
+
 }
 

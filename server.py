@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import List, Optional
 import socketio
 import bcrypt
 import secrets
@@ -54,6 +55,15 @@ class LoginRequest(BaseModel):
 
 class TokenRequest(BaseModel):
     token: str
+
+class InventoryItem(BaseModel):
+    item_id: str
+    quantity: int
+    slot_index: int
+
+class InventoryUpdateRequest(BaseModel):
+    token: str
+    items: List[InventoryItem]
 
 # User Database Path
 USER_DB_PATH = 'db/user/users.db'
@@ -223,6 +233,89 @@ async def verify_token(request: TokenRequest):
     except Exception as e:
         print(f"Token verification error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+# Inventory Endpoints
+@app.post("/api/inventory/get")
+async def get_inventory(request: TokenRequest):
+    """Fetch user's inventory by session token"""
+    try:
+        conn = get_user_db()
+        cursor = conn.cursor()
+        
+        # Verify token
+        cursor.execute(
+            "SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?",
+            (request.token, datetime.now().isoformat())
+        )
+        session = cursor.fetchone()
+        if not session:
+            conn.close()
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        
+        user_id = session[0]
+        
+        # Get inventory items
+        cursor.execute(
+            "SELECT item_id, quantity, slot_index FROM inventory WHERE user_id = ?",
+            (user_id,)
+        )
+        items = cursor.fetchall()
+        conn.close()
+        
+        inventory_data = [
+            {"item_id": i[0], "quantity": i[1], "slot_index": i[2]} 
+            for i in items
+        ]
+        
+        return {"success": True, "inventory": inventory_data}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Get inventory error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/inventory/update")
+async def update_inventory(request: InventoryUpdateRequest):
+    """Batch update user's inventory"""
+    try:
+        conn = get_user_db()
+        cursor = conn.cursor()
+        
+        # Verify token
+        cursor.execute(
+            "SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?",
+            (request.token, datetime.now().isoformat())
+        )
+        session = cursor.fetchone()
+        if not session:
+            conn.close()
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        
+        user_id = session[0]
+        
+        # Start transaction
+        # Delete existing inventory for this user
+        cursor.execute("DELETE FROM inventory WHERE user_id = ?", (user_id,))
+        
+        # Insert new items
+        for item in request.items:
+            cursor.execute(
+                "INSERT INTO inventory (user_id, item_id, quantity, slot_index) VALUES (?, ?, ?, ?)",
+                (user_id, item.item_id, item.quantity, item.slot_index)
+            )
+            
+        conn.commit()
+        conn.close()
+        
+        return {"success": True}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Update inventory error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 
 @app.post("/api/logout")
 async def logout(request: TokenRequest):
