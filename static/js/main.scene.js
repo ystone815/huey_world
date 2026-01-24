@@ -1239,8 +1239,9 @@ export class MainScene extends Phaser.Scene {
             if (child.input && child.input.enabled) return;
             if (child.scrollFactorX === 0) return;
 
-            // Skip background layers (they have fixed depths)
+            // Skip background layers and harvest bar (they have fixed depths)
             if (child === this.ground || child === this.snowGround || child === this.desertGround) return;
+            if (child === this.harvestBarBack || child === this.harvestBarFill) return;
 
             // Skip graphics objects (transitions, etc)
             if (child.type === 'Graphics') return;
