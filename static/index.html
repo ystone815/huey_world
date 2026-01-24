@@ -1142,6 +1142,7 @@
         let playerX = 50;
         let obstacles = [];
         let mobileMoveInterval = null;
+        let activeKeys = {};
 
         function openArcade() {
             returnToLobby();
@@ -1211,20 +1212,28 @@
             const screen = document.getElementById('minigame-screen');
             screen.querySelectorAll('.cactus-obstacle, .resource-item').forEach(c => c.remove());
 
+            activeKeys = {};
             minigameLoop = setInterval(updateMinigame, 50);
-            window.addEventListener('keydown', handleArcadeKeys);
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', handleKeyUp);
         }
 
         window.startCurrentGame = startCurrentGame;
 
-        function handleArcadeKeys(e) {
-            if (!minigameActive) return;
-            if (e.key === 'ArrowLeft' || e.key === 'a') playerX = Math.max(5, playerX - 6);
-            if (e.key === 'ArrowRight' || e.key === 'd') playerX = Math.min(95, playerX + 6);
-            document.getElementById('arcade-player').style.left = playerX + '%';
+        function handleKeyDown(e) {
+            activeKeys[e.key] = true;
+        }
+
+        function handleKeyUp(e) {
+            activeKeys[e.key] = false;
         }
 
         function updateMinigame() {
+            // Smooth keyboard movement
+            if (activeKeys['ArrowLeft'] || activeKeys['a']) playerX = Math.max(5, playerX - 3);
+            if (activeKeys['ArrowRight'] || activeKeys['d']) playerX = Math.min(95, playerX + 3);
+            document.getElementById('arcade-player').style.left = playerX + '%';
+
             if (currentGameId === 'cactus_dodge') {
                 minigameScore += 0.05;
                 document.getElementById('arcade-score').innerText = minigameScore.toFixed(1) + 's';
@@ -1359,7 +1368,9 @@
             minigameActive = false;
             stopPlayerMobile();
             clearInterval(minigameLoop);
-            window.removeEventListener('keydown', handleArcadeKeys);
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+            activeKeys = {};
         }
 
         async function openLeaderboard() {
