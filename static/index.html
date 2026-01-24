@@ -454,6 +454,47 @@
                 logDiv.appendChild(errDiv);
             }
         };
+
+        // Authentication Check
+        (async function checkAuth() {
+            // Check if user is already logged in
+            const userData = localStorage.getItem('hueyworld_user');
+            const token = localStorage.getItem('hueyworld_token');
+
+            if (userData) {
+                // User data exists, verify token if present
+                if (token) {
+                    try {
+                        const response = await fetch('/api/verify-token', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            // Update user data
+                            localStorage.setItem('hueyworld_user', JSON.stringify(data.user));
+                            console.log('Auto-login successful:', data.user.nickname);
+                            return; // Authenticated
+                        } else {
+                            // Token invalid, clear and redirect
+                            localStorage.removeItem('hueyworld_token');
+                            localStorage.removeItem('hueyworld_user');
+                        }
+                    } catch (error) {
+                        console.error('Token verification error:', error);
+                    }
+                } else {
+                    // No token but has user data (shouldn't happen normally)
+                    console.log('User logged in (session only)');
+                    return; // Allow access
+                }
+            }
+
+            // Not authenticated, redirect to login
+            window.location.href = '/login';
+        })();
     </script>
 </head>
 
@@ -489,6 +530,9 @@
             <div id="nickname-error"
                 style="color: #ff4444; margin-bottom: 15px; font-weight: bold; font-size: 14px; display: none;"></div>
             <button id="join-btn">JOIN WORLD</button>
+            <button id="logout-btn" class="btn btn-secondary"
+                style="margin-top: 10px; width: 100%; border-radius: 10px; padding: 10px; font-size: 14px;">Log
+                Out</button>
 
         </div>
     </div>
@@ -534,6 +578,28 @@
         // UI Logic to bridge with Phaser
         let selectedSkin = 'skin_fox';
 
+        // Load authenticated user data
+        const userData = JSON.parse(localStorage.getItem('hueyworld_user') || '{}');
+        if (userData.nickname) {
+            document.getElementById('nickname-input').value = userData.nickname;
+            document.getElementById('nickname-input').disabled = true; // Prevent editing
+        }
+        if (userData.skin) {
+            selectedSkin = userData.skin;
+            // Select the appropriate skin
+            document.querySelectorAll('.skin-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.dataset.skin === userData.skin) {
+                    opt.classList.add('selected');
+                }
+            });
+        }
+
+        // Update lobby title to show welcome message
+        if (userData.username) {
+            document.querySelector('h1').textContent = `Welcome, ${userData.username}!`;
+        }
+
         // Add selection logic
         document.querySelectorAll('.skin-option').forEach(opt => {
             opt.addEventListener('click', () => {
@@ -559,7 +625,14 @@
             const checkGame = setInterval(() => {
                 if (window.phaserGame && window.phaserGame.scene.getScene('MainScene')) {
                     const scene = window.phaserGame.scene.getScene('MainScene');
-                    scene.events.emit('request-join', { nickname, skin: selectedSkin });
+                    const userData = JSON.parse(localStorage.getItem('hueyworld_user') || '{}');
+                    const token = localStorage.getItem('hueyworld_token');
+                    scene.events.emit('request-join', {
+                        nickname,
+                        skin: selectedSkin,
+                        userData: userData,
+                        token: token
+                    });
                     clearInterval(checkGame);
                 }
             }, 100);
@@ -589,6 +662,23 @@
             if (e.key === 'Enter') {
                 document.getElementById('join-btn').click();
             }
+        });
+
+        // Logout Logic
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            const token = localStorage.getItem('hueyworld_token');
+            if (token) {
+                try {
+                    await fetch('/api/logout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token })
+                    });
+                } catch (e) { console.error('Logout error:', e); }
+            }
+            localStorage.removeItem('hueyworld_user');
+            localStorage.removeItem('hueyworld_token');
+            window.location.href = '/login';
         });
 
         // Guestbook UI Bridge

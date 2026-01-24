@@ -31,7 +31,8 @@ export class SocketManager {
             if (this.scene.nickname) {
                 this.socket.emit('set_nickname', {
                     nickname: this.scene.nickname,
-                    skin: this.scene.selectedSkin || 'skin_fox'
+                    skin: this.scene.selectedSkin || 'skin_fox',
+                    token: this.scene.token // Send token for verification
                 });
             }
 

@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 import socketio
+import bcrypt
+import secrets
 
 # 1. Create Socket.IO Server (Async)
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
@@ -33,6 +36,208 @@ from starlette.responses import FileResponse
 @app.get("/")
 async def read_index():
     return FileResponse('static/index.html')
+
+@app.get("/login")
+async def read_login():
+    return FileResponse('static/login.html')
+
+# Pydantic Models for Authentication
+class SignupRequest(BaseModel):
+    username: str
+    password: str
+    nickname: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+    remember_me: bool = False
+
+class TokenRequest(BaseModel):
+    token: str
+
+# User Database Path
+USER_DB_PATH = 'db/user/users.db'
+
+# Authentication Helper Functions
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt"""
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """Verify a password against its hash"""
+    return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
+
+def generate_token() -> str:
+    """Generate a secure random token"""
+    return secrets.token_urlsafe(32)
+
+def get_user_db():
+    """Get database connection for users"""
+    return sqlite3.connect(USER_DB_PATH)
+
+# Authentication Endpoints
+@app.post("/api/signup")
+async def signup(request: SignupRequest):
+    """Create a new user account"""
+    try:
+        # Validate input
+        if len(request.username) < 3:
+            raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
+        if len(request.password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+        if len(request.nickname) < 1:
+            raise HTTPException(status_code=400, detail="Nickname is required")
+        
+        conn = get_user_db()
+        cursor = conn.cursor()
+        
+        # Check if username already exists
+        cursor.execute("SELECT id FROM users WHERE username = ?", (request.username,))
+        if cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=400, detail="Username already exists")
+        
+        # Hash password and create user
+        password_hash = hash_password(request.password)
+        cursor.execute(
+            "INSERT INTO users (username, password_hash, nickname, last_login) VALUES (?, ?, ?, ?)",
+            (request.username, password_hash, request.nickname, datetime.now().isoformat())
+        )
+        conn.commit()
+        user_id = cursor.lastrowid
+        conn.close()
+        
+        return {"success": True, "message": "Account created successfully", "user_id": user_id}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Signup error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/login")
+async def login(request: LoginRequest):
+    """Authenticate user and optionally create session token"""
+    try:
+        conn = get_user_db()
+        cursor = conn.cursor()
+        
+        # Get user by username
+        cursor.execute(
+            "SELECT id, username, password_hash, nickname, skin FROM users WHERE username = ?",
+            (request.username,)
+        )
+        user = cursor.fetchone()
+        
+        if not user or not verify_password(request.password, user[2]):
+            conn.close()
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+        
+        user_id, username, _, nickname, skin = user
+        
+        # Update last login
+        cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", 
+                      (datetime.now().isoformat(), user_id))
+        conn.commit()
+        
+        # Generate token if remember_me is true
+        token = None
+        if request.remember_me:
+            token = generate_token()
+            expires_at = (datetime.now() + timedelta(days=30)).isoformat()
+            cursor.execute(
+                "INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
+                (token, user_id, expires_at)
+            )
+            conn.commit()
+        
+        conn.close()
+        
+        return {
+            "success": True,
+            "user": {
+                "id": user_id,
+                "username": username,
+                "nickname": nickname,
+                "skin": skin or "skin_fox"
+            },
+            "token": token
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Login error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/verify-token")
+async def verify_token(request: TokenRequest):
+    """Verify auto-login token and return user data"""
+    try:
+        conn = get_user_db()
+        cursor = conn.cursor()
+        
+        # Get session and check expiry
+        cursor.execute(
+            """SELECT s.user_id, s.expires_at, u.username, u.nickname, u.skin 
+               FROM sessions s 
+               JOIN users u ON s.user_id = u.id 
+               WHERE s.token = ?""",
+            (request.token,)
+        )
+        session = cursor.fetchone()
+        
+        if not session:
+            conn.close()
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        user_id, expires_at, username, nickname, skin = session
+        
+        # Check if token expired
+        if datetime.fromisoformat(expires_at) < datetime.now():
+            # Clean up expired token
+            cursor.execute("DELETE FROM sessions WHERE token = ?", (request.token,))
+            conn.commit()
+            conn.close()
+            raise HTTPException(status_code=401, detail="Token expired")
+        
+        # Update last login
+        cursor.execute("UPDATE users SET last_login = ? WHERE id = ?",
+                      (datetime.now().isoformat(), user_id))
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "user": {
+                "id": user_id,
+                "username": username,
+                "nickname": nickname,
+                "skin": skin or "skin_fox"
+            }
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Token verification error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/logout")
+async def logout(request: TokenRequest):
+    """Invalidate session token"""
+    try:
+        conn = get_user_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sessions WHERE token = ?", (request.token,))
+        conn.commit()
+        conn.close()
+        return {"success": True, "message": "Logged out successfully"}
+    except Exception as e:
+        print(f"Logout error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 
 # In-memory player storage
 players = {}
@@ -257,9 +462,34 @@ async def set_nickname(sid, data):
         if isinstance(data, dict):
             name = data.get('nickname', 'Unknown').strip()
             skin = data.get('skin', 'skin_fox')
+            token = data.get('token')
         else:
             name = data.strip()
             skin = 'skin_fox'
+            token = None
+
+        user_id = None
+        
+        # Verify token if present
+        if token:
+            try:
+                conn = get_user_db()
+                cursor = conn.cursor()
+                cursor.execute(
+                    """SELECT s.user_id, u.nickname FROM sessions s 
+                       JOIN users u ON s.user_id = u.id 
+                       WHERE s.token = ? AND s.expires_at > ?""",
+                    (token, datetime.now().isoformat())
+                )
+                result = cursor.fetchone()
+                if result:
+                    user_id, db_nickname = result
+                    # Force the authenticated nickname if user is logged in
+                    name = db_nickname
+                    print(f"Server: Authenticated join for {name} (User ID: {user_id})")
+                conn.close()
+            except Exception as e:
+                print(f"Token verification error during join: {e}")
 
         # Nickname validation: Uniqueness check
         is_duplicate = False
@@ -273,9 +503,24 @@ async def set_nickname(sid, data):
             await sio.emit('nickname_error', {'message': 'Nickname already taken!'}, to=sid)
             return
 
-        # If unique, update
+        # If unique and not authenticated, we could optionally prevent join if nickname belongs to an account
+        # But for now, let's just proceed.
+
+        # Update player data
         players[sid]['nickname'] = name
         players[sid]['skin'] = skin
+        players[sid]['user_id'] = user_id
+
+        # Save skin preference to DB if authenticated
+        if user_id:
+            try:
+                conn = get_user_db()
+                cursor = conn.cursor()
+                cursor.execute("UPDATE users SET skin = ? WHERE id = ?", (skin, user_id))
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"Error saving skin for user {user_id}: {e}")
             
         print(f"Server: Player joined/updated: {sid} -> {name} ({skin})")
         

@@ -1262,6 +1262,8 @@ export class MainScene extends Phaser.Scene {
         } else {
             this.nickname = data.nickname || "Player";
             this.selectedSkin = data.skin || 'skin_fox';
+            this.userData = data.userData; // New
+            this.token = data.token;       // New
         }
 
         // Initialize socket if not already done
@@ -1273,10 +1275,11 @@ export class MainScene extends Phaser.Scene {
                 window.dispatchEvent(new CustomEvent('nickname-error', { detail: "Server connection failed" }));
             }
         } else {
-            // If already connected, just emit the new nickname
+            // If already connected, just emit the new nickname with token
             this.socketManager.socket.emit('set_nickname', {
                 nickname: this.nickname,
-                skin: this.selectedSkin
+                skin: this.selectedSkin,
+                token: this.token
             });
         }
     }
