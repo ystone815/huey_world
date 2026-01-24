@@ -136,6 +136,11 @@ export class MainScene extends Phaser.Scene {
         this.board.add([boardBase, boardTop, boardText, boardLabel]);
         this.board.setSize(50, 80);
 
+        // Add physics to Board
+        this.physics.add.existing(this.board, true);
+        this.board.body.setSize(40, 40);
+        this.board.body.setOffset(-20, 0);
+
         // Interaction removed as per user request (Now only opens via proximity)
 
         // 2.2.5 Bonfire (Near Spawn)
@@ -145,6 +150,15 @@ export class MainScene extends Phaser.Scene {
         this.bonfire.setOrigin(0.5, 0.7); // Anchor at bottom center
         this.bonfire.setDepth(50); // Will be sorted by updateDepth later
         this.bonfire.setPipeline('Light2D');
+
+        // Add physics to Bonfire
+        this.physics.add.existing(this.bonfire, true);
+        this.bonfire.body.setSize(20, 20);
+        this.bonfire.body.setOffset(14, 25);
+
+        // Add collider with player
+        this.physics.add.collider(this.playerContainer, this.board);
+        this.physics.add.collider(this.playerContainer, this.bonfire);
 
 
         // Add simple light/flicker effect
