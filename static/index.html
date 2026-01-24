@@ -1144,10 +1144,10 @@
                 obs.y += 7 + (minigameScore * 0.2); // Speed increases over time
                 obs.el.style.top = obs.y + 'px';
 
-                // Collision detection
-                if (obs.y > 280 && obs.y < 330) {
+                // Collision detection (Tightened for fairness)
+                if (obs.y > 290 && obs.y < 325) {
                     const diff = Math.abs(obs.x - playerX);
-                    if (diff < 8) {
+                    if (diff < 5) {
                         gameOver();
                     }
                 }
