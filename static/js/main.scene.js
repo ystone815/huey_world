@@ -142,6 +142,13 @@ export class MainScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
+        // Building System State
+        this.isBuilding = false;
+        this.buildType = null;
+        this.ghostObject = null;
+        this.placedObjectsGroup = this.add.group();
+        this.gridSize = 48; // Minecraft-like grid size
+
         // Health Bar (Moved higher for player visibility)
         this.createHealthBar(this.playerContainer, 40, 6, -40);
 
@@ -160,6 +167,8 @@ export class MainScene extends Phaser.Scene {
         // Set World Bounds (-1000 to 1000)
         // This makes 0,0 the exact center of the map
         this.physics.world.setBounds(-1000, -1000, 2000, 2000);
+
+        this.initBuildSystem();
 
         // Camera Follow
         this.cameras.main.startFollow(this.playerContainer);
@@ -1730,6 +1739,141 @@ export class MainScene extends Phaser.Scene {
             duration: 1500,
             onComplete: () => note.destroy()
         });
+    }
+
+    // --- WORLD BUILDING SYSTEM ---
+    initBuildSystem() {
+        // 1. Listen for UI event
+        this.events.on('enter-build-mode', (data) => {
+            if (this.isBuilding) this.cancelBuild();
+
+            this.isBuilding = true;
+            this.buildType = data.type;
+
+            // Create ghost preview
+            const emojiMap = { 'fence_wood': '🪵', 'wall_stone': '🧱', 'bonfire': '🔥' };
+            this.ghostObject = this.add.text(0, 0, emojiMap[this.buildType], { fontSize: '40px' })
+                .setOrigin(0.5)
+                .setAlpha(0.6)
+                .setDepth(2000);
+
+            this.showFloatingNote("Build Mode: Click to Place");
+        });
+
+        // 2. Click to place
+        this.input.on('pointerdown', (pointer) => {
+            if (!this.isBuilding || !this.ghostObject) return;
+
+            const worldPoint = pointer.positionToCamera(this.cameras.main);
+            const gx = Math.round(worldPoint.x / this.gridSize) * this.gridSize;
+            const gy = Math.round(worldPoint.y / this.gridSize) * this.gridSize;
+
+            this.requestPlaceObject(this.buildType, gx, gy);
+        });
+
+        // 3. Movement for ghost
+        this.input.on('pointermove', (pointer) => {
+            if (!this.isBuilding || !this.ghostObject) return;
+
+            const worldPoint = pointer.positionToCamera(this.cameras.main);
+            const gx = Math.round(worldPoint.x / this.gridSize) * this.gridSize;
+            const gy = Math.round(worldPoint.y / this.gridSize) * this.gridSize;
+
+            this.ghostObject.setPosition(gx, gy);
+        });
+
+        // 4. Cancel on ESC
+        this.input.keyboard.on('keydown-ESC', () => this.cancelBuild());
+
+        // 5. Load existing objects
+        this.loadPlacedObjects();
+    }
+
+    cancelBuild() {
+        this.isBuilding = false;
+        this.buildType = null;
+        if (this.ghostObject) {
+            this.ghostObject.destroy();
+            this.ghostObject = null;
+        }
+    }
+
+    async loadPlacedObjects() {
+        try {
+            const response = await fetch('/api/world/objects');
+            const data = await response.json();
+            if (data.success) {
+                // Clear existing group to avoid overlaps on reload
+                this.placedObjectsGroup.clear(true, true);
+                data.objects.forEach(obj => {
+                    this.renderPlacedObject(obj);
+                });
+            }
+        } catch (e) {
+            console.error("Load objects error:", e);
+        }
+    }
+
+    renderPlacedObject(obj) {
+        const emojiMap = { 'fence_wood': '🪵', 'wall_stone': '🧱', 'bonfire': '🔥' };
+
+        const txt = this.add.text(obj.x, obj.y, emojiMap[obj.type] || '❓', { fontSize: '40px' })
+            .setOrigin(0.5)
+            .setDepth(obj.y + 100) // Simple Y-sorting
+            .setPipeline('Light2D');
+
+        this.placedObjectsGroup.add(txt);
+
+        // Add physics body for collision if it's a structural object
+        if (obj.type !== 'bonfire') {
+            this.physics.add.existing(txt, true); // Static body
+            this.physics.add.collider(this.playerContainer, txt);
+        }
+    }
+
+    async requestPlaceObject(type, x, y) {
+        const token = localStorage.getItem('hueyworld_token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/world/place', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: token,
+                    type: type,
+                    x: x,
+                    y: y
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.showFloatingNote("Constructed!");
+                this.cancelBuild();
+                // Note: The object will be rendered via socket broadcast 'object_placed'
+                // This ensures consistency across all clients.
+
+                // Refresh inventory UI if visible
+                if (window.updateInventoryUI) window.updateInventoryUI();
+            } else {
+                this.showFloatingNote(`Build Failed: ${data.detail}`);
+            }
+        } catch (e) {
+            this.showFloatingNote("Server Error");
+        }
+    }
+
+    handleObjectPlaced(data) {
+        // Check if already exists (basic deduplication)
+        let exists = false;
+        this.placedObjectsGroup.getChildren().forEach(child => {
+            if (child.x === data.x && child.y === data.y) exists = true;
+        });
+
+        if (!exists) {
+            this.renderPlacedObject(data);
+        }
     }
 
 }

@@ -220,6 +220,14 @@ export class SocketManager {
             console.log("Socket: Received show_emoji", data);
             this.scene.events.emit('show-remote-emoji', data);
         });
+
+        // World Building Sync
+        this.socket.on('object_placed', (data) => {
+            console.log("Socket: Object placed", data);
+            if (this.scene.handleObjectPlaced) {
+                this.scene.handleObjectPlaced(data);
+            }
+        });
     }
 
     emitMove(x, y) {

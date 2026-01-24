@@ -65,10 +65,22 @@ class InventoryUpdateRequest(BaseModel):
     token: str
     items: List[InventoryItem]
 
+class PlaceObjectRequest(BaseModel):
+    token: str
+    type: str
+    x: float
+    y: float
+
 # User Database Path
 USER_DB_PATH = 'db/user/users.db'
+WORLD_DB_PATH = 'db/world/world.db'
 
-# Authentication Helper Functions
+# Building Costs Map
+BUILD_COSTS = {
+    'fence_wood': {'wood': 2},
+    'wall_stone': {'snow_crystal': 2},
+    'bonfire': {'wood': 1, 'cactus_fiber': 1}
+}
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
     salt = bcrypt.gensalt(rounds=12)
@@ -85,6 +97,10 @@ def generate_token() -> str:
 def get_user_db():
     """Get database connection for users"""
     return sqlite3.connect(USER_DB_PATH)
+
+def get_world_db():
+    """Get database connection for world state"""
+    return sqlite3.connect(WORLD_DB_PATH)
 
 # Authentication Endpoints
 @app.post("/api/signup")
@@ -396,6 +412,98 @@ async def logout(request: TokenRequest):
         return {"success": True, "message": "Logged out successfully"}
     except Exception as e:
         print(f"Logout error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# World Building Endpoints
+@app.get("/api/world/objects")
+async def get_world_objects():
+    """Fetch all placed objects in the world"""
+    try:
+        conn = get_world_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT type, x, y, owner_username FROM placed_objects")
+        rows = cursor.fetchall()
+        conn.close()
+        
+        objs = [
+            {"type": r[0], "x": r[1], "y": r[2], "owner": r[3]} for r in rows
+        ]
+        return {"success": True, "objects": objs}
+    except Exception as e:
+        print(f"Get world objects error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/world/place")
+async def place_object(request: PlaceObjectRequest):
+    """Place a new object in the world, deducting resources"""
+    try:
+        # 1. Verify Authentication
+        user_conn = get_user_db()
+        user_cursor = user_conn.cursor()
+        
+        user_cursor.execute(
+            "SELECT u.id, u.username FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ? AND s.expires_at > ?",
+            (request.token, datetime.now().isoformat())
+        )
+        user_session = user_cursor.fetchone()
+        
+        if not user_session:
+            user_conn.close()
+            raise HTTPException(status_code=401, detail="Unauthorized")
+            
+        user_id, username = user_session
+        
+        # 2. Check Costs
+        if request.type not in BUILD_COSTS:
+            user_conn.close()
+            raise HTTPException(status_code=400, detail="Unknown object type")
+            
+        costs = BUILD_COSTS[request.type]
+        
+        # Check if user has enough items
+        for item_id, qty in costs.items():
+            user_cursor.execute(
+                "SELECT quantity FROM inventory WHERE user_id = ? AND item_id = ?",
+                (user_id, item_id)
+            )
+            item_row = user_cursor.fetchone()
+            if not item_row or item_row[0] < qty:
+                user_conn.close()
+                raise HTTPException(status_code=400, detail=f"Not enough {item_id}")
+        
+        # 3. Deduct Items
+        for item_id, qty in costs.items():
+            user_cursor.execute(
+                "UPDATE inventory SET quantity = quantity - ? WHERE user_id = ? AND item_id = ?",
+                (qty, user_id, item_id)
+            )
+            # Remove row if quantity is 0
+            user_cursor.execute("DELETE FROM inventory WHERE quantity <= 0")
+            
+        user_conn.commit()
+        user_conn.close()
+        
+        # 4. Record to World DB
+        world_conn = get_world_db()
+        world_cursor = world_conn.cursor()
+        world_cursor.execute(
+            "INSERT INTO placed_objects (type, x, y, owner_username) VALUES (?, ?, ?, ?)",
+            (request.type, request.x, request.y, username)
+        )
+        world_conn.commit()
+        world_conn.close()
+        
+        # 5. Broadcast via Socket.IO
+        new_obj = {"type": request.type, "x": request.x, "y": request.y, "owner": username}
+        await sio.emit('object_placed', new_obj)
+        
+        return {"success": True, "object": new_obj}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Place object error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
