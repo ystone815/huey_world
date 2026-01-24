@@ -320,11 +320,12 @@ async def update_inventory(request: InventoryUpdateRequest):
 # Minigame & Leaderboard Endpoints
 class ScoreSubmitRequest(BaseModel):
     token: str
+    game_id: str
     score: int
 
 @app.post("/api/minigame/submit")
 async def submit_score(request: ScoreSubmitRequest):
-    """Securely submit a minigame score"""
+    """Securely submit a minigame score for a specific game"""
     try:
         conn = get_user_db()
         cursor = conn.cursor()
@@ -341,10 +342,10 @@ async def submit_score(request: ScoreSubmitRequest):
         
         user_id = session[0]
         
-        # Insert score
+        # Insert score with game_id
         cursor.execute(
-            "INSERT INTO leaderboard (user_id, score) VALUES (?, ?)",
-            (user_id, request.score)
+            "INSERT INTO leaderboard (user_id, game_id, score) VALUES (?, ?, ?)",
+            (user_id, request.game_id, request.score)
         )
         conn.commit()
         conn.close()
@@ -357,8 +358,8 @@ async def submit_score(request: ScoreSubmitRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/minigame/leaderboard")
-async def get_leaderboard():
-    """Fetch global top 10 scores with nicknames"""
+async def get_leaderboard(game_id: str = 'cactus_dodge'):
+    """Fetch global top 10 scores for a specific game"""
     try:
         conn = get_user_db()
         cursor = conn.cursor()
@@ -366,10 +367,11 @@ async def get_leaderboard():
             SELECT u.nickname, MAX(l.score) as high_score 
             FROM leaderboard l
             JOIN users u ON l.user_id = u.id
+            WHERE l.game_id = ?
             GROUP BY l.user_id
             ORDER BY high_score DESC
             LIMIT 10
-        """)
+        """, (game_id,))
         rows = cursor.fetchall()
         conn.close()
         

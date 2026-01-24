@@ -742,28 +742,48 @@
     <div id="minigame-overlay">
         <div class="arcade-cabinet">
             <span class="close-arcade" onclick="closeArcade()">&times;</span>
-            <h2 style="color: #e94560; margin: 0; font-family: 'Courier New', Courier, monospace;">🌵 CACTUS DODGE 🌵
-            </h2>
-            <div id="minigame-screen">
-                <div id="arcade-start-hint" style="color: #fff; text-shadow: 0 0 10px #e94560;">Press START to Play
-                </div>
-                <div id="arcade-player" style="display: none;">🦊</div>
-                <div id="arcade-score"
-                    style="position: absolute; top: 10px; right: 15px; color: #fff; font-size: 18px; display: none;">
-                    0.0s</div>
-            </div>
-            <div class="arcade-controls">
-                <button class="arcade-btn" id="arcade-start-btn" onclick="startMinigame()">Start</button>
-                <button class="arcade-btn" onclick="openLeaderboard()" style="background: #0f3460;">Ranking</button>
-            </div>
-            <p style="color: #4e4e6a; font-size: 10px; margin: 0;">Use LEFT/RIGHT ARROWS or A/D to move</p>
+            <h2 id="arcade-title" style="color: #e94560; margin: 0; font-family: 'Courier New', Courier, monospace;">🕹️
+                ARCADE HUB 🕹️</h2>
 
-            <!-- Mobile Controls -->
-            <div class="arcade-mobile-controls">
-                <button class="mobile-ctrl-btn" ontouchstart="movePlayerMobile('left')"
-                    ontouchend="stopPlayerMobile()">◀</button>
-                <button class="mobile-ctrl-btn" ontouchstart="movePlayerMobile('right')"
-                    ontouchend="stopPlayerMobile()">▶</button>
+            <!-- 1. Arcade Lobby (Menu) -->
+            <div id="arcade-lobby-ui">
+                <p style="color: #fff9c4; font-size: 14px; margin: 15px 0;">Select a challenge to prove your skill!</p>
+                <div class="arcade-controls" style="flex-direction: column; gap: 10px;">
+                    <button class="arcade-btn" style="width: 100%;" onclick="showGamePreview('cactus_dodge')">🌵 Cactus
+                        Dodge</button>
+                    <button class="arcade-btn" style="width: 100%; background: #00bcd4;"
+                        onclick="showGamePreview('resource_rush')">🍎 Resource Rush</button>
+                    <button class="arcade-btn" onclick="openLeaderboard()"
+                        style="background: #0f3460; width: 100%;">Global Rankings</button>
+                </div>
+            </div>
+
+            <!-- 2. Game View (Shared Screen) -->
+            <div id="arcade-game-ui" style="display: none;">
+                <div id="minigame-screen">
+                    <div id="arcade-start-hint" style="color: #fff; text-shadow: 0 0 10px #e94560;">Press START to Begin
+                    </div>
+                    <div id="arcade-player" style="display: none;">🦊</div>
+                    <div id="arcade-score"
+                        style="position: absolute; top: 10px; right: 15px; color: #fff; font-size: 18px; display: none;">
+                        0.0s</div>
+                    <div id="arcade-timer"
+                        style="position: absolute; top: 10px; left: 15px; color: #ffeb3b; font-size: 18px; display: none;">
+                        30s</div>
+                </div>
+                <div class="arcade-controls">
+                    <button class="arcade-btn" id="arcade-start-btn" onclick="startCurrentGame()">Start</button>
+                    <button class="arcade-btn" onclick="returnToLobby()" style="background: #5d4037;">Exit Game</button>
+                </div>
+                <p style="color: #4e4e6a; font-size: 10px; margin: 5px 0;">Use LEFT/RIGHT ARROWS or A/D to move</p>
+
+                <!-- Mobile Controls -->
+                <div class="arcade-mobile-controls">
+                    <button class="mobile-ctrl-btn" ontouchstart="movePlayerMobile('left')"
+                        ontouchend="stopPlayerMobile()">◀</button>
+                    <button class="mobile-ctrl-btn" ontouchstart="movePlayerMobile('right')"
+                        ontouchend="stopPlayerMobile()">▶</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1113,13 +1133,144 @@
             }
         });
 
-        // --- MINIGAME LOGIC ---
+        // --- MINIGAME LOGIC (Multi-Game) ---
+        let currentGameId = 'cactus_dodge';
         let minigameActive = false;
         let minigameScore = 0;
         let minigameLoop = null;
-        let playerX = 50; // Percentage
+        let gameTimeLeft = 30;
+        let playerX = 50;
         let obstacles = [];
         let mobileMoveInterval = null;
+
+        function openArcade() {
+            returnToLobby();
+            document.getElementById('minigame-overlay').style.display = 'flex';
+        }
+
+        window.openArcade = openArcade;
+
+        function returnToLobby() {
+            stopMinigame();
+            document.getElementById('arcade-lobby-ui').style.display = 'block';
+            document.getElementById('arcade-game-ui').style.display = 'none';
+            document.getElementById('arcade-title').innerText = "🕹️ ARCADE HUB 🕹️";
+        }
+
+        window.returnToLobby = returnToLobby;
+
+        function showGamePreview(gameId) {
+            currentGameId = gameId;
+            document.getElementById('arcade-lobby-ui').style.display = 'none';
+            document.getElementById('arcade-game-ui').style.display = 'block';
+
+            const titles = { 'cactus_dodge': '🌵 CACTUS DODGE 🌵', 'resource_rush': '🍎 RESOURCE RUSH 🍎' };
+            document.getElementById('arcade-title').innerText = titles[gameId];
+
+            resetGameUI();
+        }
+
+        window.showGamePreview = showGamePreview;
+
+        function resetGameUI() {
+            document.getElementById('arcade-start-hint').style.display = 'block';
+            document.getElementById('arcade-start-hint').innerText = "Press START to Begin";
+            document.getElementById('arcade-player').style.display = 'none';
+            document.getElementById('arcade-score').style.display = 'none';
+            document.getElementById('arcade-timer').style.display = 'none';
+            document.getElementById('arcade-start-btn').innerText = 'Start';
+            const screen = document.getElementById('minigame-screen');
+            screen.querySelectorAll('.cactus-obstacle, .resource-item').forEach(c => c.remove());
+        }
+
+        function startCurrentGame() {
+            if (minigameActive) return;
+            minigameActive = true;
+            minigameScore = 0;
+            playerX = 50;
+            obstacles = [];
+            gameTimeLeft = 30;
+
+            document.getElementById('arcade-start-hint').style.display = 'none';
+            const playerEl = document.getElementById('arcade-player');
+            playerEl.style.display = 'block';
+            playerEl.style.left = '50%';
+
+            const scoreEl = document.getElementById('arcade-score');
+            scoreEl.style.display = 'block';
+            scoreEl.innerText = (currentGameId === 'cactus_dodge') ? '0.0s' : 'Items: 0';
+
+            if (currentGameId === 'resource_rush') {
+                const timerEl = document.getElementById('arcade-timer');
+                timerEl.style.display = 'block';
+                timerEl.innerText = '30s';
+            }
+
+            document.getElementById('arcade-start-btn').innerText = 'Restart';
+
+            const screen = document.getElementById('minigame-screen');
+            screen.querySelectorAll('.cactus-obstacle, .resource-item').forEach(c => c.remove());
+
+            minigameLoop = setInterval(updateMinigame, 50);
+            window.addEventListener('keydown', handleArcadeKeys);
+        }
+
+        window.startCurrentGame = startCurrentGame;
+
+        function handleArcadeKeys(e) {
+            if (!minigameActive) return;
+            if (e.key === 'ArrowLeft' || e.key === 'a') playerX = Math.max(5, playerX - 6);
+            if (e.key === 'ArrowRight' || e.key === 'd') playerX = Math.min(95, playerX + 6);
+            document.getElementById('arcade-player').style.left = playerX + '%';
+        }
+
+        function updateMinigame() {
+            if (currentGameId === 'cactus_dodge') {
+                minigameScore += 0.05;
+                document.getElementById('arcade-score').innerText = minigameScore.toFixed(1) + 's';
+                if (Math.random() < 0.1) spawnObstacle();
+            } else { // Resource Rush
+                gameTimeLeft -= 0.05;
+                document.getElementById('arcade-timer').innerText = Math.ceil(gameTimeLeft) + 's';
+                if (gameTimeLeft <= 0) { gameOver(); return; }
+                if (Math.random() < 0.15) spawnResource();
+            }
+
+            // Move entities
+            const screenHeight = (currentGameId === 'resource_rush') ? 250 : 350; // Dynamic mobile fix check
+            const actualHeight = document.getElementById('minigame-screen').offsetHeight;
+
+            obstacles.forEach((obs, index) => {
+                obs.y += obs.speed || (7 + (minigameScore * 0.1));
+                obs.el.style.top = obs.y + 'px';
+
+                // Collision detection
+                const playerY = actualHeight - 60;
+                if (obs.y > playerY - 10 && obs.y < playerY + 30) {
+                    const diff = Math.abs(obs.x - playerX);
+                    if (diff < 5) {
+                        if (currentGameId === 'cactus_dodge') {
+                            gameOver();
+                        } else if (obs.type === 'good') {
+                            minigameScore += 1;
+                            document.getElementById('arcade-score').innerText = 'Items: ' + minigameScore;
+                            obs.el.remove();
+                            obstacles.splice(index, 1);
+                        } else if (obs.type === 'bad') {
+                            gameTimeLeft -= 3; // Penalty
+                            obs.el.remove();
+                            obstacles.splice(index, 1);
+                        }
+                    }
+                }
+
+                // Cleanup
+                if (obs.y > actualHeight + 50) {
+                    obs.el.remove();
+                    obstacles.splice(index, 1);
+                }
+            });
+        }
 
         function movePlayerMobile(dir) {
             if (!minigameActive) return;
@@ -1138,12 +1289,6 @@
         window.movePlayerMobile = movePlayerMobile;
         window.stopPlayerMobile = stopPlayerMobile;
 
-        function openArcade() {
-            document.getElementById('minigame-overlay').style.display = 'flex';
-        }
-
-        window.openArcade = openArcade; // Expose to Phaser
-
         function closeArcade() {
             stopPlayerMobile();
             stopMinigame();
@@ -1152,74 +1297,6 @@
         }
 
         window.closeArcade = closeArcade;
-
-        function startMinigame() {
-            if (minigameActive) return;
-            minigameActive = true;
-            minigameScore = 0;
-            playerX = 50;
-            obstacles = [];
-
-            document.getElementById('arcade-start-hint').style.display = 'none';
-            const playerEl = document.getElementById('arcade-player');
-            playerEl.style.display = 'block';
-            playerEl.style.left = '50%';
-
-            const scoreEl = document.getElementById('arcade-score');
-            scoreEl.style.display = 'block';
-            scoreEl.innerText = '0.0s';
-
-            document.getElementById('arcade-start-btn').innerText = 'Restart';
-
-            // Clear screen of old obstacles
-            const screen = document.getElementById('minigame-screen');
-            screen.querySelectorAll('.cactus-obstacle').forEach(c => c.remove());
-
-            minigameLoop = setInterval(updateMinigame, 50);
-
-            // Global key listeners for arcade
-            window.addEventListener('keydown', handleArcadeKeys);
-        }
-
-        window.startMinigame = startMinigame;
-
-        function handleArcadeKeys(e) {
-            if (!minigameActive) return;
-            if (e.key === 'ArrowLeft' || e.key === 'a') playerX = Math.max(5, playerX - 8);
-            if (e.key === 'ArrowRight' || e.key === 'd') playerX = Math.min(95, playerX + 8);
-            document.getElementById('arcade-player').style.left = playerX + '%';
-        }
-
-        function updateMinigame() {
-            minigameScore += 0.05;
-            document.getElementById('arcade-score').innerText = minigameScore.toFixed(1) + 's';
-
-            // Spawn obstacles
-            if (Math.random() < 0.1) {
-                spawnObstacle();
-            }
-
-            // Move obstacles
-            const screenHeight = 350;
-            obstacles.forEach((obs, index) => {
-                obs.y += 7 + (minigameScore * 0.2); // Speed increases over time
-                obs.el.style.top = obs.y + 'px';
-
-                // Collision detection (Tightened for fairness)
-                if (obs.y > 290 && obs.y < 325) {
-                    const diff = Math.abs(obs.x - playerX);
-                    if (diff < 5) {
-                        gameOver();
-                    }
-                }
-
-                // Cleanup
-                if (obs.y > screenHeight) {
-                    obs.el.remove();
-                    obstacles.splice(index, 1);
-                }
-            });
-        }
 
         function spawnObstacle() {
             const screen = document.getElementById('minigame-screen');
@@ -1233,21 +1310,49 @@
             obstacles.push({ el: obsEl, x: x, y: -50 });
         }
 
+        function spawnResource() {
+            const screen = document.getElementById('minigame-screen');
+            const resEl = document.createElement('div');
+            resEl.className = 'resource-item';
+            resEl.style.position = 'absolute';
+            resEl.style.fontSize = '24px';
+
+            const isBad = Math.random() < 0.2;
+            const items = ['🪵', '🍎', '💎', '🧶'];
+            resEl.innerText = isBad ? '💣' : items[Math.floor(Math.random() * items.length)];
+
+            const x = Math.random() * 90 + 5;
+            resEl.style.left = x + '%';
+            resEl.style.top = '-50px';
+            screen.appendChild(resEl);
+            obstacles.push({
+                el: resEl,
+                x: x,
+                y: -50,
+                type: isBad ? 'bad' : 'good',
+                speed: Math.random() * 3 + 5
+            });
+        }
+
         function gameOver() {
+            const finalScore = minigameScore;
             stopMinigame();
 
             // Submit score
             const token = localStorage.getItem('hueyworld_token');
             if (token) {
+                const scoreValue = (currentGameId === 'cactus_dodge') ? Math.floor(finalScore * 10) : finalScore;
                 fetch('/api/minigame/submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: token, score: Math.floor(minigameScore * 10) })
+                    body: JSON.stringify({ token: token, game_id: currentGameId, score: scoreValue })
                 });
             }
 
             document.getElementById('arcade-start-hint').style.display = 'block';
-            document.getElementById('arcade-start-hint').innerText = "Game Over! Final: " + minigameScore.toFixed(1) + "s. Try Again?";
+            const unit = (currentGameId === 'cactus_dodge') ? 's' : ' items';
+            const val = (currentGameId === 'cactus_dodge') ? finalScore.toFixed(1) : finalScore;
+            document.getElementById('arcade-start-hint').innerText = `Game Over! Final: ${val}${unit}. Try Again?`;
         }
 
         function stopMinigame() {
@@ -1259,11 +1364,12 @@
 
         async function openLeaderboard() {
             const listEl = document.getElementById('leaderboard-list');
-            listEl.innerHTML = '<div style="color: #ccc; text-align: center;">Loading scores...</div>';
+            listEl.innerHTML = '<div style="color: #ccc; text-align: center;">Loading...</div>';
             document.getElementById('leaderboard-overlay').style.display = 'flex';
 
             try {
-                const response = await fetch('/api/minigame/leaderboard');
+                // Fetch for current game in lobby or preview
+                const response = await fetch(`/api/minigame/leaderboard?game_id=${currentGameId}`);
                 const data = await response.json();
 
                 listEl.innerHTML = '';
@@ -1271,10 +1377,11 @@
                     data.leaderboard.forEach((entry, i) => {
                         const row = document.createElement('div');
                         row.className = 'lb-row';
+                        const scoreStr = (currentGameId === 'cactus_dodge') ? (entry.score / 10).toFixed(1) + 's' : entry.score + ' items';
                         row.innerHTML = `
                             <span class="lb-rank">#${i + 1}</span>
                             <span class="lb-nick">${entry.nickname}</span>
-                            <span class="lb-score">${(entry.score / 10).toFixed(1)}s</span>
+                            <span class="lb-score">${scoreStr}</span>
                         `;
                         listEl.appendChild(row);
                     });
