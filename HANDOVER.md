@@ -88,21 +88,84 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 
 ---
 
-## 🗺️ Next Steps (Brainstormed Ideas)
-1.  **Visual Juice**:
-    - [x] **Particle Effects**: Dust on walking, fire sparks (Completed).
-    - [/] **Environmental Life**: NPCs (Roach/Sheep) wander the world (In-progress).
-    - [ ] **Weather System**: Occasional rainy phases affecting lighting.
-2.  **Social & Expression**:
-    - [x] **Emoji Popups**: Numbers 1-4 triggers emoji bubbles above head (Completed).
-    - [ ] **Global Chat**: Real-time communication bar.
-    - [ ] **Titles**: Achievement-based labels (e.g., "Night Owl").
+## 🗺️ Next Steps (Feature Proposals)
 
-3.  **Gamification**:
-    - [ ] **Collectibles**: Gathering acorns or flowers in the woods.
-    - [ ] **Pets**: Small companions following the player.
-4.  **Audio**:
-    - [ ] **BGM/SFX**: Atmospheric forest music and walking sound effects.
+### Priority 1: Social & Communication 💬
+1. **Global Chat System** ⭐⭐ (2-3 hours)
+   - Real-time chat bar at bottom of screen
+   - Message broadcasting to all players
+   - Chat history (last 10 messages)
+   - Nickname + timestamp display
+   - **Impact**: High - Enables player communication and community building
+
+2. **Player Actions/Emotes** ⭐⭐ (2 hours)
+   - Sit/lie down animations
+   - Wave hand gesture
+   - Dance animation
+   - AFK status indicator
+   - **Impact**: Medium - Non-verbal communication
+
+### Priority 2: Gameplay & Progression 🎮
+3. **Collection System** ⭐⭐ (3-4 hours)
+   - Collectible items spawned on map (acorns, flowers, mushrooms)
+   - Click/proximity to collect
+   - Inventory storage and display
+   - Collection counter
+   - **Impact**: High - Adds gameplay objective
+
+4. **Achievement/Title System** ⭐⭐ (3 hours)
+   - Achievements: "Night Explorer", "Social Butterfly", "Collector"
+   - Title display above nickname
+   - Achievement notification popup
+   - Persistent storage in database
+   - **Impact**: Medium - Long-term engagement
+
+5. **Pet Companion System** ⭐⭐⭐ (4-5 hours)
+   - Pet selection UI (cat, dog, bird)
+   - Follow AI (tracks player position)
+   - Y-sorting integration
+   - Pet customization
+   - **Impact**: High - Personalization and cuteness factor
+
+### Priority 3: Atmosphere & Immersion 🌍
+6. **Weather System** ⭐⭐⭐ (4-6 hours)
+   - Rain/snow particle effects
+   - Weather-based lighting changes
+   - Periodic weather cycles (10-15 min)
+   - Puddle effects during rain
+   - **Impact**: High - Dynamic world feeling
+
+7. **Audio System** ⭐ (1-2 hours)
+   - Day/night BGM tracks
+   - Walking sound effects
+   - Bonfire crackling sound
+   - Volume controls in UI
+   - **Impact**: Medium - Immersion boost
+
+### Priority 4: Advanced Features 🚀
+8. **Mini-game: Hide & Seek** ⭐⭐⭐⭐ (6-8 hours)
+   - Seeker assignment system
+   - Game timer and scoring
+   - Player visibility toggle
+   - Game lobby UI
+   - **Impact**: High - Player interaction and fun
+
+9. **Player Homes/Tents** ⭐⭐⭐⭐ (8-10 hours)
+   - Placeable tent/home objects
+   - Interior scenes
+   - Furniture customization
+   - Persistent storage
+   - **Impact**: Very High - Personal space and creativity
+
+---
+
+### Completed Features ✅
+- [x] **Particle Effects**: Dust on walking, fire sparks
+- [x] **Emoji Popups**: Numbers 1-4 triggers emoji bubbles above head
+- [x] **Environmental Life**: NPCs (Roach/Sheep) wander the world
+- [x] **Day/Night Cycle**: 5-minute cycle with 2D lighting
+- [x] **Biome System**: Snow, Forest, Desert with unique objects
+- [x] **Collision System**: Tree/object collision with trunk-only hitboxes
 
 ## ✅ Completed in this Session (Latest)
 - **Sprite Optimization**: 
