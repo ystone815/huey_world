@@ -1169,13 +1169,13 @@
         let currentGameId = 'cactus_dodge';
         let minigameActive = false;
         let minigameScore = 0;
-        let minigameLoop = null;
+        let minigameLoopId = null;
+        let lastTimestamp = 0;
         let gameTimeLeft = 30;
         let playerX = 50;
         let obstacles = [];
-        let mobileMoveInterval = null;
+        let mobileMoveDir = null;
         let activeKeys = {};
-
         function openArcade() {
             returnToLobby();
             document.getElementById('minigame-overlay').style.display = 'flex';
@@ -1223,6 +1223,7 @@
             playerX = 50;
             obstacles = [];
             gameTimeLeft = 30;
+            lastTimestamp = performance.now();
 
             document.getElementById('arcade-start-hint').style.display = 'none';
             const playerEl = document.getElementById('arcade-player');
@@ -1245,9 +1246,10 @@
             screen.querySelectorAll('.cactus-obstacle, .resource-item').forEach(c => c.remove());
 
             activeKeys = {};
-            minigameLoop = setInterval(updateMinigame, 16); // 60 FPS
             window.addEventListener('keydown', handleKeyDown);
             window.addEventListener('keyup', handleKeyUp);
+
+            minigameLoopId = requestAnimationFrame(updateMinigame);
         }
 
         window.startCurrentGame = startCurrentGame;
@@ -1260,9 +1262,15 @@
             activeKeys[e.key] = false;
         }
 
-        function updateMinigame() {
+        function updateMinigame(timestamp) {
+            if (!minigameActive) return;
+
+            const dt = (timestamp - lastTimestamp) / 1000; // Delta in seconds
+            lastTimestamp = timestamp;
+
             // Unified Constant Velocity Movement (Keyboard + Mobile)
-            const speed = 1.0;
+            // Speed adjusted for per-second calculation (approx 60% width per sec)
+            const speed = 65 * dt;
             const isLeft = activeKeys['ArrowLeft'] || activeKeys['a'] || mobileMoveDir === 'left';
             const isRight = activeKeys['ArrowRight'] || activeKeys['d'] || mobileMoveDir === 'right';
 
@@ -1272,21 +1280,22 @@
             document.getElementById('arcade-player').style.left = playerX + '%';
 
             if (currentGameId === 'cactus_dodge') {
-                minigameScore += 0.016;
+                minigameScore += dt;
                 document.getElementById('arcade-score').innerText = minigameScore.toFixed(1) + 's';
-                if (Math.random() < 0.035) spawnObstacle();
+                if (Math.random() < 2 * dt) spawnObstacle();
             } else { // Resource Rush
-                gameTimeLeft -= 0.016;
-                document.getElementById('arcade-timer').innerText = Math.ceil(gameTimeLeft) + 's';
+                gameTimeLeft -= dt;
+                document.getElementById('arcade-timer').innerText = Math.max(0, Math.ceil(gameTimeLeft)) + 's';
                 if (gameTimeLeft <= 0) { gameOver(); return; }
-                if (Math.random() < 0.05) spawnResource();
+                if (Math.random() < 3 * dt) spawnResource();
             }
 
             // Move entities
             const actualHeight = document.getElementById('minigame-screen').offsetHeight;
 
             obstacles.forEach((obs, index) => {
-                const baseSpeed = obs.speed || (2.5 + (minigameScore * 0.04));
+                // Base falling speed + acceleration over time
+                const baseSpeed = obs.speed ? obs.speed * 60 * dt : (150 + (minigameScore * 6)) * dt;
                 obs.y += baseSpeed;
                 obs.el.style.top = obs.y + 'px';
 
@@ -1316,6 +1325,8 @@
                     obstacles.splice(index, 1);
                 }
             });
+
+            minigameLoopId = requestAnimationFrame(updateMinigame);
         }
 
         function movePlayerMobile(dir) {
@@ -1399,7 +1410,8 @@
         function stopMinigame() {
             minigameActive = false;
             stopPlayerMobile();
-            clearInterval(minigameLoop);
+            if (minigameLoopId) cancelAnimationFrame(minigameLoopId);
+            minigameLoopId = null;
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
             activeKeys = {};
