@@ -113,14 +113,7 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 ## 🗺️ Next Steps (Feature Proposals)
 
 ### Priority 1: Social & Communication 💬
-1. **Global Chat System** ⭐⭐ (2-3 hours)
-   - Real-time chat bar at bottom of screen
-   - Message broadcasting to all players
-   - Chat history (last 10 messages)
-   - Nickname + timestamp display
-   - **Impact**: High - Enables player communication and community building
-
-2. **Player Actions/Emotes** ⭐⭐ (2 hours)
+1. **Player Actions/Emotes** ⭐⭐ (2 hours)
    - Sit/lie down animations
    - Wave hand gesture
    - Dance animation
@@ -128,21 +121,21 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
    - **Impact**: Medium - Non-verbal communication
 
 ### Priority 2: Gameplay & Progression 🎮
-3. **Collection System** ⭐⭐ (3-4 hours)
+1. **Collection System** ⭐⭐ (3-4 hours)
    - Collectible items spawned on map (acorns, flowers, mushrooms)
    - Click/proximity to collect
    - Inventory storage and display
    - Collection counter
    - **Impact**: High - Adds gameplay objective
 
-4. **Achievement/Title System** ⭐⭐ (3 hours)
+2. **Achievement/Title System** ⭐⭐ (3 hours)
    - Achievements: "Night Explorer", "Social Butterfly", "Collector"
    - Title display above nickname
    - Achievement notification popup
    - Persistent storage in database
    - **Impact**: Medium - Long-term engagement
 
-5. **Pet Companion System** ⭐⭐⭐ (4-5 hours)
+2. **Pet Companion System** ⭐⭐⭐ (4-5 hours)
    - Pet selection UI (cat, dog, bird)
    - Follow AI (tracks player position)
    - Y-sorting integration
@@ -150,14 +143,14 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
    - **Impact**: High - Personalization and cuteness factor
 
 ### Priority 3: Atmosphere & Immersion 🌍
-6. **Weather System** ⭐⭐⭐ (4-6 hours)
+1. **Weather System** ⭐⭐⭐ (4-6 hours)
    - Rain/snow particle effects
    - Weather-based lighting changes
    - Periodic weather cycles (10-15 min)
    - Puddle effects during rain
    - **Impact**: High - Dynamic world feeling
 
-7. **Audio System** ⭐ (1-2 hours)
+2. **Audio System** ⭐ (1-2 hours)
    - Day/night BGM tracks
    - Walking sound effects
    - Bonfire crackling sound
@@ -165,14 +158,14 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
    - **Impact**: Medium - Immersion boost
 
 ### Priority 4: Advanced Features 🚀
-8. **Mini-game: Hide & Seek** ⭐⭐⭐⭐ (6-8 hours)
+1. **Mini-game: Hide & Seek** ⭐⭐⭐⭐ (6-8 hours)
    - Seeker assignment system
    - Game timer and scoring
    - Player visibility toggle
    - Game lobby UI
    - **Impact**: High - Player interaction and fun
 
-9. **Player Homes/Tents** ⭐⭐⭐⭐ (8-10 hours)
+2. **Player Homes/Tents** ⭐⭐⭐⭐ (8-10 hours)
    - Placeable tent/home objects
    - Interior scenes
    - Furniture customization

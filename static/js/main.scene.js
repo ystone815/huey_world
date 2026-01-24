@@ -473,12 +473,12 @@ export class MainScene extends Phaser.Scene {
             // Limited Dynamic Joystick Logic
             let joystickPointerId = null;
             this.input.on('pointerdown', (pointer) => {
-                if (!this.isJoined) return;
+                if (!this.isJoined || this.isAnyOverlayOpen()) return;
 
-                // Check for Bottom-Left Quadrant (3rd Quadrant)
-                const isBottomLeft = pointer.x < this.scale.width / 2 && pointer.y > this.scale.height / 2;
+                // Check for Expanded Joystick Zone (Bottom 50% Height, Left 75% Width)
+                const isValidJoystickZone = pointer.x < this.scale.width * 0.75 && pointer.y > this.scale.height / 2;
 
-                if (isBottomLeft) {
+                if (isValidJoystickZone) {
                     joystickPointerId = pointer.id;
                     this.joyStick.setPosition(pointer.x, pointer.y);
                     this.joyStick.setVisible(true);
@@ -524,8 +524,9 @@ export class MainScene extends Phaser.Scene {
 
         const screenWidth = this.scale.width;
         const screenHeight = this.scale.height;
-        const btnRadius = 28;
-        const margin = 20;
+        // Reduced size: 70% of original (28 -> 20)
+        const btnRadius = 20;
+        const margin = 15;
 
         // Position: Bottom-Right
         const x = screenWidth - btnRadius - margin;
@@ -533,23 +534,23 @@ export class MainScene extends Phaser.Scene {
 
         // 1. Main Button
         const btnBase = this.add.circle(x, y, btnRadius, 0x444444, 0.8).setScrollFactor(0).setDepth(2000).setInteractive();
-        const btnIcon = this.add.text(x, y, '❤️', { fontSize: '24px' }).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
+        const btnIcon = this.add.text(x, y, '❤️', { fontSize: '18px' }).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
         btnBase.setStrokeStyle(2, 0xffffff);
 
         // 2. Radial Menu Container
         const menuContainer = this.add.container(x, y).setScrollFactor(0).setDepth(2010).setVisible(false);
-        const menuBg = this.add.circle(0, 0, 80, 0x000000, 0.4).setStrokeStyle(1, 0x888888);
+        const menuBg = this.add.circle(0, 0, 60, 0x000000, 0.4).setStrokeStyle(1, 0x888888); // Reduced bg radius
 
         const emojis = [
-            { char: '😂', dx: 0, dy: -60, dir: 'north' },
-            { char: '❤️', dx: 0, dy: 60, dir: 'south' },
-            { char: '🔥', dx: 60, dy: 0, dir: 'east' },
-            { char: '😮', dx: -60, dy: 0, dir: 'west' }
+            { char: '😂', dx: 0, dy: -45, dir: 'north' },
+            { char: '❤️', dx: 0, dy: 45, dir: 'south' },
+            { char: '🔥', dx: 45, dy: 0, dir: 'east' },
+            { char: '😮', dx: -45, dy: 0, dir: 'west' }
         ];
 
         const emojiObjs = {};
         emojis.forEach(e => {
-            const txt = this.add.text(e.dx, e.dy, e.char, { fontSize: '32px' }).setOrigin(0.5);
+            const txt = this.add.text(e.dx, e.dy, e.char, { fontSize: '24px' }).setOrigin(0.5);
             menuContainer.add(txt);
             emojiObjs[e.dir] = txt;
         });
@@ -576,7 +577,7 @@ export class MainScene extends Phaser.Scene {
             // Reset highlights
             Object.values(emojiObjs).forEach(o => o.setScale(1));
 
-            if (dist > 30) {
+            if (dist > 20) { // Reduced threshold
                 // Determine direction
                 let dir = null;
                 if (Math.abs(dx) > Math.abs(dy)) {
@@ -611,7 +612,7 @@ export class MainScene extends Phaser.Scene {
         });
 
         // 3. Mobile Inventory Button (Top-Right)
-        const invBtnRadius = 28;
+        const invBtnRadius = 20; // Reduced from 28
         const invBtnX = screenWidth - invBtnRadius - 10; // Offset from right
         const invBtnY = 180; // Below minimap and clock
 
@@ -621,7 +622,7 @@ export class MainScene extends Phaser.Scene {
             .setInteractive()
             .setStrokeStyle(2, 0xffffff);
 
-        const mobInvIcon = this.add.text(invBtnX, invBtnY, '🎒', { fontSize: '24px' })
+        const mobInvIcon = this.add.text(invBtnX, invBtnY, '🎒', { fontSize: '18px' }) // Reduced from 24px
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(2001);
@@ -647,12 +648,18 @@ export class MainScene extends Phaser.Scene {
         const lobbyOverlay = document.getElementById('lobby-overlay');
         const invOverlay = document.getElementById('inventory-overlay');
         const gbOverlay = document.getElementById('guestbook-overlay');
+        const mgOverlay = document.getElementById('minigame-overlay');
+        const lbOverlay = document.getElementById('leaderboard-overlay');
+        const buildOverlay = document.getElementById('build-overlay');
 
         const isLobbyOpen = lobbyOverlay && (lobbyOverlay.style.display !== 'none' && lobbyOverlay.style.opacity !== '0');
         const isInventoryOpen = invOverlay && invOverlay.style.display === 'flex';
         const isGbOpen = gbOverlay && gbOverlay.style.display === 'flex';
+        const isMgOpen = mgOverlay && mgOverlay.style.display === 'flex';
+        const isLbOpen = lbOverlay && lbOverlay.style.display === 'flex';
+        const isBuildOpen = buildOverlay && buildOverlay.style.display === 'flex';
 
-        return isLobbyOpen || isInventoryOpen || isGbOpen;
+        return isLobbyOpen || isInventoryOpen || isGbOpen || isMgOpen || isLbOpen || isBuildOpen;
     }
 
     showEmojiPopup(container, emoji) {
@@ -862,14 +869,21 @@ export class MainScene extends Phaser.Scene {
 
         let color = playerInfo.color;
         if (typeof color === 'string' && color.startsWith('#')) {
-            color = parseInt(color.replace('#', '0x'));
+            color = '#' + color.replace('#', '');
+        } else if (typeof color === 'number') {
+            color = '#' + color.toString(16).padStart(6, '0');
+        } else {
+            color = '#ffffff';
         }
-        otherPlayer.setTint(color); // Keep tint for others to distinguish them
+
+        // Removed: otherPlayer.setTint(color); 
 
         const otherText = this.add.text(0, 35, playerInfo.nickname || 'Unknown', {
             font: '14px Arial',
-            fill: '#ffffff',
-            align: 'center'
+            fill: color, // Apply color to text instead
+            align: 'center',
+            stroke: '#000000',
+            strokeThickness: 3
         })
             .setOrigin(0.5)
             .setName('nicknameText');
@@ -1694,10 +1708,23 @@ export class MainScene extends Phaser.Scene {
             if (Math.random() < 0.2) loot.push({ id: 'desert_fruit', qty: 1 });
         }
 
-        loot.forEach(item => {
+        // Initialize Emoji Map for visual feedback
+        const itemEmojis = {
+            'wood': '🪵',
+            'forest_apple': '🍎',
+            'frozen_wood': '🧊',
+            'snow_crystal': '💎',
+            'cactus_fiber': '🧵',
+            'desert_fruit': '🌵'
+        };
+
+        loot.forEach((item, index) => {
             this.addItem(item.id, item.qty);
-            const itemName = (this.itemNames && this.itemNames[item.id]) ? this.itemNames[item.id] : item.id;
-            this.showFloatingNote(`+${item.qty} ${itemName}`);
+
+            // Show Floating Emoji Animation instead of text
+            this.time.delayedCall(index * 200, () => {
+                this.showFloatingItem(item.id, item.qty, itemEmojis[item.id] || '🎁');
+            });
         });
 
         const target = this.harvestTarget;
@@ -1713,6 +1740,38 @@ export class MainScene extends Phaser.Scene {
         });
 
         this.cancelHarvesting();
+    }
+
+    showFloatingItem(itemId, qty, emoji) {
+        // Create container for emoji and text
+        const container = this.add.container(this.playerContainer.x, this.playerContainer.y - 40);
+
+        // Emoji Sprite (Large)
+        const emojiText = this.add.text(0, 0, emoji, { fontSize: '48px' }).setOrigin(0.5);
+
+        // Quantity Badge
+        const qtyText = this.add.text(20, 20, `+${qty}`, {
+            fontSize: '20px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+
+        container.add([emojiText, qtyText]);
+        container.setDepth(5000); // On top of everything
+
+        // Animation: Pop up, float, and fade
+        this.tweens.add({
+            targets: container,
+            y: container.y - 80,
+            scaleX: 1.5,
+            scaleY: 1.5,
+            alpha: 0,
+            duration: 1200,
+            ease: 'Back.easeOut',
+            onComplete: () => container.destroy()
+        });
     }
 
     showFloatingNote(text) {
