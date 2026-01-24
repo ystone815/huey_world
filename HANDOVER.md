@@ -179,9 +179,11 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
   - Created mobile-friendly paged UI (20 slots x 2 pages) with "Next/Prev" navigation
   - Added secure backend endpoints for inventory fetch and synchronization
   - Integrated real-time UI updates on item collection
-- **Object Interaction**:
-  - Implemented static physics collision for the bonfire and guestbook board
-  - Character can no longer pass through these entities
+- **UX & UI Polish**:
+  - Repositioned player/NPC nicknames to appear below the character (previously above) to resolve overlap with health bars.
+  - Standardized inventory slot size (4x5 per page) for mobile consistency.
+- **Git State**:
+  - Pushed all persistent inventory, harvesting, and UI changes to remote repository.
 - **Sprite Optimization**: 
   - Fixed cactus sprite: removed thick edges with clean transparent background
   - Fixed snow_tree sprite: removed background artifacts using magenta-bg generation method

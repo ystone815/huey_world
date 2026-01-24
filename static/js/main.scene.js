@@ -269,7 +269,7 @@ export class MainScene extends Phaser.Scene {
 
         // Harvesting UI: Progress Bar
         this.harvestBarBack = this.add.rectangle(0, 0, 60, 8, 0x000000, 0.7).setOrigin(0.5).setDepth(2000).setVisible(false);
-        this.harvestBarFill = this.add.rectangle(0, 0, 0, 6, 0x00ff00, 1).setOrigin(0, 0.5).setDepth(2001).setVisible(false);
+        this.harvestBarFill = this.add.rectangle(0, 0, 0, 6, 0xffaa00, 1).setOrigin(0, 0.5).setDepth(2001).setVisible(false);
 
         // Harvesting UI: Prompt
         this.harvestPromptText = this.add.text(0, 0, "[SPACE] 채집하기 (Gather)", {
@@ -1564,8 +1564,8 @@ export class MainScene extends Phaser.Scene {
             // New tree target
             this.harvestTarget = nearestTree;
             this.harvestPromptText.setPosition(this.playerContainer.x, this.playerContainer.y - 60);
-            this.harvestPromptText.setText(`채집 중... (Harvesting...)`);
-            this.harvestPromptText.setVisible(true);
+            this.harvestPromptText.setText(``); // Removed redundant "Harvesting..." text
+            this.harvestPromptText.setVisible(false);
             this.harvestPromptActive = true;
 
             // Trigger start automatically
@@ -1588,8 +1588,8 @@ export class MainScene extends Phaser.Scene {
             this.harvestProgress += delta;
 
             const progress = Math.min(this.harvestProgress / this.harvestDuration, 1);
-            this.harvestBarBack.setPosition(this.playerContainer.x, this.playerContainer.y - 45).setVisible(true);
-            this.harvestBarFill.setPosition(this.playerContainer.x - 29, this.playerContainer.y - 45).setVisible(true);
+            this.harvestBarBack.setPosition(this.playerContainer.x, this.playerContainer.y - 60).setVisible(true);
+            this.harvestBarFill.setPosition(this.playerContainer.x - 29, this.playerContainer.y - 60).setVisible(true);
             this.harvestBarFill.width = 58 * progress;
             // No need to hide prompt, it shows "Harvesting..."
 
