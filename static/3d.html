@@ -410,6 +410,7 @@
         let inventory = [];
         let isJoined = false;
         let buildMode = null; // null or 'voxel_box' etc.
+        const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
         // --- 1. Scene Setup ---
         const scene = new THREE.Scene();
@@ -839,7 +840,7 @@
             window.location.reload();
         };
 
-        // Key Listeners for UI
+        // Key Listeners for UI & Movement
         window.addEventListener('keydown', (e) => {
             if (e.key === 'i') toggleInventory();
             if (e.key === 'b') toggleBuildMenu();
@@ -847,6 +848,12 @@
                 document.getElementById('inventory-overlay').style.display = 'none';
                 document.getElementById('build-overlay').style.display = 'none';
             }
+            if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
+            if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false;
+            if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
         });
 
         async function loadWorld() {
@@ -1027,12 +1034,28 @@
             const dt = now - lastTime;
             lastTime = now;
 
-            const isMoving = joystickActive;
+            // --- Movement Logic ---
+            let moveX = joystickVector.x;
+            let moveZ = joystickVector.y;
+
+            // Add Keyboard Input
+            if (keys.w || keys.ArrowUp) moveZ -= 1;
+            if (keys.s || keys.ArrowDown) moveZ += 1;
+            if (keys.a || keys.ArrowLeft) moveX -= 1;
+            if (keys.d || keys.ArrowRight) moveX += 1;
+
+            const isMoving = Math.abs(moveX) > 0.01 || Math.abs(moveZ) > 0.01;
+
             if (isMoving) {
-                camera.position.x += joystickVector.x * moveSpeed;
-                camera.position.z += joystickVector.y * moveSpeed;
-                controls.target.x += joystickVector.x * moveSpeed;
-                controls.target.z += joystickVector.y * moveSpeed;
+                // Normalize keyboard input if both axes are used
+                const mag = Math.sqrt(moveX * moveX + moveZ * moveZ);
+                const finalMoveX = (moveX / mag) * moveSpeed;
+                const finalMoveZ = (moveZ / mag) * moveSpeed;
+
+                camera.position.x += finalMoveX;
+                camera.position.z += finalMoveZ;
+                controls.target.x += finalMoveX;
+                controls.target.z += finalMoveZ;
             }
 
             updateHarvesting(dt);
