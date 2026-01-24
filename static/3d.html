@@ -1,60 +1,330 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huey3D - Voxel Prototype</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Huey3D - Voxel Adventure</title>
+    <!-- Use same style as index.html but modified for 3D -->
     <style>
+        html,
         body {
             margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
             background-color: #000;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Arial', sans-serif;
         }
 
-        #ui {
+        canvas {
+            display: block;
+        }
+
+        /* --- UI STYLES (PORTED FROM INDEX.HTML) --- */
+        #lobby-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, #4a4a4a 0%, #2d2d2d 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .lobby-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #ffcc00;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 0px #8a6d00;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 18px;
+            text-align: center;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            background: #ffcc00;
+            color: #2d2d2d;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .character-selection {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+            width: 100%;
+        }
+
+        .skin-option {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .skin-option.selected {
+            border-color: #ffcc00;
+            background: rgba(255, 204, 0, 0.2);
+        }
+
+        .skin-preview {
+            width: 48px;
+            height: 48px;
+            image-rendering: pixelated;
+            object-fit: contain;
+        }
+
+        /* HUD & Inventory Styling */
+        #inventory-overlay,
+        #build-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2500;
+        }
+
+        .inventory-content,
+        .build-content {
+            background: #3e2723;
+            border: 4px solid #795548;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .inv-slot {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .inv-item-qty {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 0 2px;
+        }
+
+        #build-btn-hud {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 65px;
+            height: 65px;
+            background: #4db6ac;
+            border: 4px solid #ffffff;
+            border-radius: 50%;
+            color: white;
+            font-size: 30px;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        /* 3D UI Info */
+        #game-ui {
             position: absolute;
             top: 20px;
             left: 20px;
-            color: white;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px;
-            border-radius: 10px;
-            border: 2px solid #4db6ac;
             pointer-events: none;
-            user-select: none;
         }
 
-        .controls-hint {
-            margin-top: 10px;
-            font-size: 13px;
-            color: #b2dfdb;
+        .info-panel {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            color: #fff;
+            border: 1px solid #4db6ac;
         }
 
-        kbd {
-            background: #333;
-            border: 1px solid #555;
-            border-radius: 3px;
-            padding: 2px 5px;
-            font-size: 11px;
+        /* Mobile Controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: none;
+            z-index: 1000;
+        }
+
+        #joystick-base {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        #joystick-thumb {
+            width: 50px;
+            height: 50px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
     </style>
 </head>
 
 <body>
-    <div id="ui">
-        <h2 style="margin: 0; color: #4db6ac;">🦊 Huey3D Prototype</h2>
-        <p style="margin: 5px 0 0 0; font-size: 14px;">Minecraft-style Voxel Builder</p>
-        <div class="controls-hint">
-            <p><kbd>Left Click</kbd> Place Block</p>
-            <p><kbd>Right Click</kbd> Remove Block</p>
-            <p><kbd>Drag</kbd> Rotate View</p>
-            <p><kbd>Scroll</kbd> Zoom</p>
+    <div id="game-ui" style="display:none;">
+        <div class="info-panel">
+            <h3 style="margin:0; color:#ffcc00;">🦊 Huey3D</h3>
+            <div id="player-nick" style="font-weight:bold;">...</div>
+            <div id="controls-hint" style="font-size:12px; color:#ccc; margin-top:5px;">
+                WASD: Move | LeftClick: Build | RightClick: Remove | ESC: Build Menu
+            </div>
         </div>
     </div>
 
-    <!-- Import Three.js via CDN -->
+    <!-- Build HUD Button -->
+    <div id="build-btn-hud" onclick="toggleBuildMenu()">🔨</div>
+
+    <!-- Lobby -->
+    <div id="lobby-overlay">
+        <div class="lobby-content">
+            <h1>Huey World 3D</h1>
+            <div class="input-group">
+                <input type="text" id="nickname-input" placeholder="Enter Nickname" maxlength="12">
+            </div>
+            <div class="character-selection">
+                <div class="skin-option selected" data-skin="skin_fox">
+                    <img src="static/assets/skin_fox.png?v=2" class="skin-preview"><span
+                        style="font-size:10px; color:#fff;">FOX</span>
+                </div>
+                <!-- Other skins Omitted for brevity but can be added back -->
+            </div>
+            <button id="join-btn">JOIN WORLD</button>
+            <button id="logout-btn" style="margin-top:10px; font-size:14px; background:#555; color:#fff;">Log
+                Out</button>
+        </div>
+    </div>
+
+    <!-- Inventory Overlay -->
+    <div id="inventory-overlay">
+        <div class="inventory-content">
+            <div class="inventory-header">
+                <h2>🎒 인벤토리 (Inventory)</h2>
+                <span onclick="toggleInventory()" style="cursor:pointer; font-size:24px;">×</span>
+            </div>
+            <div id="inventory-grid" class="inventory-grid">
+                <!-- Slots generated by JS -->
+            </div>
+            <button onclick="toggleInventory()" style="background:#555;">Close</button>
+        </div>
+    </div>
+
+    <!-- Build Overlay -->
+    <div id="build-overlay">
+        <div class="build-content">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="color: #4db6ac; margin: 0;">🔨 Construct World</h2>
+                <span onclick="toggleBuildMenu()" style="cursor:pointer; color:#fff; font-size:24px;">×</span>
+            </div>
+            <div class="inventory-grid" id="build-menu-grid">
+                <!-- Ported from index.html -->
+                <div class="inv-slot" id="build-item-voxel_box" onclick="startPlacement('voxel_box')">📦<div
+                        style="font-size:8px;">Box (1 Wood)</div>
+                </div>
+                <div class="inv-slot" id="build-item-fence_wood" onclick="startPlacement('fence_wood')">🪵<div
+                        style="font-size:8px;">Fence (2 Wood)</div>
+                </div>
+                <div class="inv-slot" id="build-item-wall_stone" onclick="startPlacement('wall_stone')">🧱<div
+                        style="font-size:8px;">Wall (2 Crystal)</div>
+                </div>
+                <div class="inv-slot" id="build-item-remove" onclick="startPlacement('remove')"
+                    style="border-color:#f44336;">❌<div style="font-size:8px; color:#f44336;">Remove</div>
+                </div>
+            </div>
+            <button onclick="toggleBuildMenu()" style="background:#555;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Mobile UI Component -->
+    <div id="mobile-controls">
+        <div id="joystick-base">
+            <div id="joystick-thumb"></div>
+        </div>
+    </div>
+
+    <!-- Core Libs -->
+    <script src="/static/js/vendor/socket.io.min.js"></script>
     <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
     <script type="importmap">
     {
@@ -69,11 +339,16 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // --- 1. Scene Setup ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb); // Sky blue
+        let socket;
+        let myPlayer;
+        let otherPlayers = {};
+        let inventory = [];
+        let isJoined = false;
+        let buildMode = null; // null or 'voxel_box' etc.
 
-        // Fog for depth
+        // --- 1. Three.js Engine Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb);
         scene.fog = new THREE.Fog(0x87ceeb, 20, 100);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -81,117 +356,271 @@
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
 
-        // --- 2. Lighting ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        // Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
         dirLight.position.set(10, 20, 10);
         dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 1024;
-        dirLight.shadow.mapSize.height = 1024;
         scene.add(dirLight);
 
-        // --- 3. Voxel Geometry ---
-        const gridSize = 50;
-        const cellSize = 1;
+        // Infinite Grid
+        const grid = new THREE.GridHelper(100, 100, 0x000000, 0x888888);
+        scene.add(grid);
 
-        // Ground Plane (Invisible or Grid)
-        const gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x000000, 0xdddddd);
-        scene.add(gridHelper);
+        // Interaction Objects Group
+        const worldObjects = [];
+        const floorGeo = new THREE.PlaneGeometry(100, 100);
+        const floorMat = new THREE.ShadowMaterial({ opacity: 0.2 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+        worldObjects.push(floor);
 
-        const planeGeo = new THREE.PlaneGeometry(gridSize, gridSize);
-        const planeMat = new THREE.ShadowMaterial({ opacity: 0.1 });
-        const plane = new THREE.Mesh(planeGeo, planeMat);
-        plane.rotation.x = -Math.PI / 2;
-        plane.receiveShadow = true;
-        scene.add(plane);
+        // --- 2. System Integration (Auth & Sync) ---
+        const token = localStorage.getItem('hueyworld_token');
+        const loginData = JSON.parse(localStorage.getItem('hueyworld_user') || '{}');
+        if (loginData.nickname) document.getElementById('nickname-input').value = loginData.nickname;
 
-        const objects = []; // For raycasting
-        objects.push(plane);
+        document.getElementById('join-btn').onclick = () => {
+            const nick = document.getElementById('nickname-input').value || "Fox";
+            initGame(nick);
+        };
 
-        // Preview Ghost
-        const ghostGeo = new THREE.BoxGeometry(cellSize, cellSize, cellSize);
-        const ghostMat = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.5, transparent: true });
-        const ghostMesh = new THREE.Mesh(ghostGeo, ghostMat);
-        scene.add(ghostMesh);
+        async function initGame(nickname) {
+            document.getElementById('lobby-overlay').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('build-btn-hud').style.display = 'flex';
+            document.getElementById('player-nick').innerText = nickname;
 
-        // Materials for blocks
-        const blockMat = new THREE.MeshLambertMaterial({ color: 0x4db6ac });
+            // Socket.IO Init
+            socket = io('http://' + window.location.hostname + ':8001');
 
-        // --- 4. Interaction ---
+            socket.on('connect', () => {
+                socket.emit('set_nickname', { nickname, token });
+            });
+
+            socket.on('current_players', (players) => {
+                // Render others
+            });
+
+            socket.on('object_placed', (data) => {
+                renderVoxel(data.x, data.y, data.z, data.type);
+            });
+
+            isJoined = true;
+            fetchInventory();
+            loadWorld();
+        }
+
+        async function fetchInventory() {
+            if (!token) return;
+            const res = await fetch('/api/inventory/get', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+            const data = await res.json();
+            if (data.success) {
+                inventory = data.inventory;
+                renderInventoryUI();
+            }
+        }
+
+        function renderInventoryUI() {
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+            const emojiMap = { 'wood': '🪵', 'forest_apple': '🍎', 'frozen_wood': '🧊', 'snow_crystal': '💎', 'cactus_fiber': '🧵', 'desert_fruit': '🌵' };
+
+            for (let i = 0; i < 20; i++) {
+                const item = inventory.find(it => it.slot_index === i);
+                const slot = document.createElement('div');
+                slot.className = 'inv-slot';
+                if (item) {
+                    slot.innerText = emojiMap[item.item_id] || '📦';
+                    if (item.quantity > 1) {
+                        const qty = document.createElement('span');
+                        qty.className = 'inv-item-qty';
+                        qty.innerText = item.quantity;
+                        slot.appendChild(qty);
+                    }
+                }
+                grid.appendChild(slot);
+            }
+        }
+
+        window.toggleInventory = () => {
+            const inv = document.getElementById('inventory-overlay');
+            inv.style.display = inv.style.display === 'flex' ? 'none' : 'flex';
+        };
+
+        document.getElementById('logout-btn').onclick = () => {
+            localStorage.removeItem('hueyworld_user');
+            localStorage.removeItem('hueyworld_token');
+            window.location.reload();
+        };
+
+        // Key Listeners for UI
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'i') toggleInventory();
+            if (e.key === 'b') toggleBuildMenu();
+            if (e.key === 'Escape') {
+                document.getElementById('inventory-overlay').style.display = 'none';
+                document.getElementById('build-overlay').style.display = 'none';
+            }
+        });
+
+        async function loadWorld() {
+            const res = await fetch('/api/world/objects');
+            const data = await res.json();
+            if (data.success) {
+                data.objects.forEach(obj => renderVoxel(obj.x, obj.z, obj.y, obj.type));
+            }
+        }
+
+        function renderVoxel(x, z, y, type) {
+            const geo = new THREE.BoxGeometry(1, 1, 1);
+            const mat = new THREE.MeshLambertMaterial({ color: (type === 'bonfire' ? 0xff4400 : 0x4db6ac) });
+            const voxel = new THREE.Mesh(geo, mat);
+            voxel.position.set(x, y + 0.5, z);
+            voxel.castShadow = true;
+            voxel.receiveShadow = true;
+            scene.add(voxel);
+            worldObjects.push(voxel);
+        }
+
+        // --- 3. Interaction & Build Mode ---
+        const BUILD_COSTS = {
+            'fence_wood': { 'wood': 2 },
+            'wall_stone': { 'snow_crystal': 2 },
+            'bonfire': { 'wood': 1, 'cactus_fiber': 1 },
+            'voxel_box': { 'wood': 1 }
+        };
+
+        window.toggleBuildMenu = () => {
+            const overlay = document.getElementById('build-overlay');
+            overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+            if (overlay.style.display === 'flex') updateBuildMenuAffordability();
+        };
+
+        function updateBuildMenuAffordability() {
+            for (const [id, costs] of Object.entries(BUILD_COSTS)) {
+                let canAfford = true;
+                for (const [item_id, qty] of Object.entries(costs)) {
+                    const invItem = inventory.find(it => it.item_id === item_id);
+                    if (!invItem || invItem.quantity < qty) { canAfford = false; break; }
+                }
+                // (Note: in 3D we didn't add IDs to slots yet, would need them for gray-out)
+            }
+        }
+
+        window.startPlacement = (type) => {
+            if (type !== 'remove') {
+                const costs = BUILD_COSTS[type];
+                let canAfford = true;
+                for (const [item_id, qty] of Object.entries(costs)) {
+                    const invItem = inventory.find(it => it.item_id === item_id);
+                    if (!invItem || invItem.quantity < qty) { canAfford = false; break; }
+                }
+                if (!canAfford) { alert("Not enough materials!"); return; }
+            }
+            buildMode = type;
+            toggleBuildMenu();
+            console.log("Entering Build Mode:", type);
+        };
+
+        // Raycasting for Mouse Interaction
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        window.addEventListener('mousemove', (event) => {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        window.addEventListener('mousedown', async (e) => {
+            if (!isJoined || !buildMode) return;
 
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(objects);
 
+            const intersects = raycaster.intersectObjects(worldObjects);
             if (intersects.length > 0) {
                 const intersect = intersects[0];
-                ghostMesh.position.copy(intersect.point).add(intersect.face.normal);
-                ghostMesh.position.divideScalar(cellSize).floor().multiplyScalar(cellSize).addScalar(cellSize / 2);
-            }
-        });
+                const pos = intersect.point.clone().add(intersect.face.normal.clone().multiplyScalar(0.5));
+                const gx = Math.floor(pos.x);
+                const gy = Math.floor(pos.y);
+                const gz = Math.floor(pos.z);
 
-        window.addEventListener('mousedown', (event) => {
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(objects);
-
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-
-                // Left Click: Place
-                if (event.button === 0) {
-                    const voxel = new THREE.Mesh(ghostGeo, blockMat);
-                    voxel.castShadow = true;
-                    voxel.receiveShadow = true;
-
-                    voxel.position.copy(intersect.point).add(intersect.face.normal);
-                    voxel.position.divideScalar(cellSize).floor().multiplyScalar(cellSize).addScalar(cellSize / 2);
-
-                    scene.add(voxel);
-                    objects.push(voxel);
-                }
-
-                // Right Click: Remove
-                if (event.button === 2 && intersect.object !== plane) {
-                    scene.remove(intersect.object);
-                    objects.splice(objects.indexOf(intersect.object), 1);
+                if (buildMode === 'remove') {
+                    // Removal logic...
+                } else {
+                    // Place logic via API
+                    const res = await fetch('/api/world/place', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token, type: buildMode, x: gx, y: gz, z: gy })
+                    });
+                    if (res.ok) fetchInventory();
                 }
             }
         });
 
-        // Prevent context menu on right click
-        window.addEventListener('contextmenu', (e) => e.preventDefault());
+        // --- 4. Mobile Support (Joystick) ---
+        let joystickActive = false;
+        let joystickVector = new THREE.Vector2(0, 0);
+        const stick = document.getElementById('joystick-thumb');
+        const base = document.getElementById('joystick-base');
 
-        // Handle Resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        base.addEventListener('touchstart', (e) => { joystickActive = true; moveStick(e); });
+        window.addEventListener('touchmove', (e) => { if (joystickActive) moveStick(e); });
+        window.addEventListener('touchend', () => {
+            joystickActive = false;
+            stick.style.left = '50%'; stick.style.top = '50%';
+            joystickVector.set(0, 0);
         });
 
-        // Loop
+        function moveStick(e) {
+            const rect = base.getBoundingClientRect();
+            const touch = e.touches[0];
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const maxDist = rect.width / 2;
+
+            if (dist > maxDist) {
+                dx *= (maxDist / dist);
+                dy *= (maxDist / dist);
+            }
+
+            stick.style.left = (50 + (dx / rect.width * 100)) + '%';
+            stick.style.top = (50 + (dy / rect.height * 100)) + '%';
+
+            joystickVector.set(dx / maxDist, dy / maxDist);
+        }
+
+        // --- 5. Game Loop ---
+        const moveSpeed = 0.1;
         function animate() {
             requestAnimationFrame(animate);
+
+            // Movement logic
+            if (joystickActive) {
+                // Move camera/player based on joystick
+                camera.position.x += joystickVector.x * moveSpeed;
+                camera.position.z += joystickVector.y * moveSpeed;
+                controls.target.x += joystickVector.x * moveSpeed;
+                controls.target.z += joystickVector.y * moveSpeed;
+            }
+
             controls.update();
             renderer.render(scene, camera);
         }
         animate();
 
-        console.log("3D Scene Initialized!");
     </script>
 </body>
 
