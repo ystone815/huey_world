@@ -1,38 +1,40 @@
 from PIL import Image, ImageDraw
 
-def remove_background(input_path, output_path):
-    img = Image.open(input_path).convert("RGBA")
-    width, height = img.size
+def remove_background(input_path, output_path, target_color=(255, 0, 255), tolerance=30):
+    """
+    Remove a specific background color from an image.
     
-    # Target color (white/off-white) to remove from edges
-    # We use flood fill from the corners
+    Args:
+        input_path: Path to input image
+        output_path: Path to save output image
+        target_color: RGB tuple of color to remove (default: magenta #FF00FF)
+        tolerance: Color matching tolerance (0-255)
+    """
+    img = Image.open(input_path).convert("RGBA")
     data = img.getdata()
     
-    # Use ImageDraw.floodfill to mark background
-    # We'll create a mask
-    mask = Image.new("L", (width, height), 0)
+    new_data = []
+    for item in data:
+        r, g, b, a = item
+        
+        # Check if pixel matches target color within tolerance
+        r_match = abs(r - target_color[0]) <= tolerance
+        g_match = abs(g - target_color[1]) <= tolerance
+        b_match = abs(b - target_color[2]) <= tolerance
+        
+        # Also check for magenta-tinted pixels (anti-aliasing artifacts)
+        # Magenta has high R and B, but low G
+        is_magenta_tinted = (r > 200 and b > 200 and g < 150) or \
+                           (r + b > g * 2.5 and r > 100 and b > 100)
+        
+        if (r_match and g_match and b_match) or is_magenta_tinted:
+            # Make this pixel transparent
+            new_data.append((0, 0, 0, 0))
+        else:
+            # Keep the pixel as is
+            new_data.append(item)
     
-    # Fill from the four corners if they are close to white
-    target_color = (255, 255, 255, 255)
-    
-    # Tolerance for "white"
-    def is_white(rgba):
-        return rgba[0] > 240 and rgba[1] > 240 and rgba[2] > 240
-    
-    # We'll use a flood fill on a copy to find the background
-    bg_mask = Image.new("L", (width, height), 0)
-    draw = ImageDraw.Draw(bg_mask)
-    
-    # Check corners
-    corners = [(0, 0), (width-1, 0), (0, height-1), (width-1, height-1)]
-    for x, y in corners:
-        if is_white(img.getpixel((x, y))):
-            ImageDraw.floodfill(img, (x, y), (0, 0, 0, 0), thresh=20)
-            
-    # The floodfill above actually modified the image.
-    # We want to make sure the "filled" areas are truly transparent.
-    # Pillow's floodfill with (0,0,0,0) on an RGBA image works if the image is in RGBA.
-    
+    img.putdata(new_data)
     img.save(output_path)
     print(f"Processed image saved to {output_path}")
 

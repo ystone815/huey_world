@@ -23,11 +23,11 @@ export class MainScene extends Phaser.Scene {
         this.load.image('desert_ground', 'static/assets/desert_ground.png');
 
         // New Biome Assets
-        this.load.image('snow_tree', 'static/assets/snow_tree.png');
-        this.load.image('cactus', 'static/assets/cactus.png');
+        this.load.image('snow_tree', 'static/assets/snow_tree.png?v=3');
+        this.load.image('cactus', 'static/assets/cactus.png?v=6');
 
         // NPCs
-        this.load.image('npc_roach', 'static/assets/npc_roach.png');
+        this.load.image('npc_roach', 'static/assets/npc_roach2.png?v=3');
         this.load.image('npc_sheep', 'static/assets/npc_sheep2.png');
     }
 
@@ -1188,20 +1188,25 @@ export class MainScene extends Phaser.Scene {
             tree.setDepth(t.y); // Y-sort immediately
 
             // Physics Body (Trunk only)
-            // Tree is 96x96. Trunk is roughly at the bottom center.
-            // We want a small box at the base.
+            // Adjust body size and offset based on tree type
             tree.refreshBody(); // Sync physics with display size/origin
 
-            // Adjust body size to be smaller (the trunk)
-            // Width: 20, Height: 20
-            tree.body.setSize(20, 20);
-
-            // Offset needs to be calculated based on the origin (0.5, 0.9) and size
-            // Default body is top-left of the texture.
-            // Texture is 96x96. Center x is 48. Anchor y is 0.9 * 96 = ~86.
-            // We want body center to be at (48, 86).
-            // With size 20x20, top-left of body should be roughly (38, 76).
-            tree.body.setOffset(38, 70);
+            if (texture === 'cactus') {
+                // Cactus is 64x64, origin at (0.5, 0.9)
+                // Smaller collision box for cactus trunk
+                tree.body.setSize(16, 16);
+                // Center x: 32, Anchor y: 0.9 * 64 = 57.6
+                tree.body.setOffset(24, 46);
+            } else if (texture === 'snow_tree') {
+                // Snow tree is 96x96, origin at (0.5, 0.9)
+                tree.body.setSize(20, 20);
+                // Center x: 48, Anchor y: 0.9 * 96 = 86.4
+                tree.body.setOffset(38, 70);
+            } else {
+                // Regular tree is 96x96, origin at (0.5, 0.9)
+                tree.body.setSize(20, 20);
+                tree.body.setOffset(38, 70);
+            }
 
             // Add to minimap
             if (this.minimapConfig) {
