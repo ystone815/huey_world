@@ -53,20 +53,32 @@ export class MainScene extends Phaser.Scene {
 
         // Smooth Transition Gradients (Centered on -700 and 700)
 
-        // Snow to Forest (-700 Boundary)
+        // 1. Snow to Forest (Boundary: -700)
         const snowTransition = this.add.graphics();
-        // Start solid white at -700 and fade to transparent at -400 (300px fade into forest)
+        // A. Forest -> Seam (Fade from transparent to solid white over 250px)
+        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 0, 0, 1, 1);
+        snowTransition.fillRect(-1000, -700, 2000, 250);
+        // B. THE SEAM BUFFER (Solid white strip to hide the tile edge)
+        snowTransition.fillStyle(0xffffff, 1);
+        snowTransition.fillRect(-1000, -710, 2000, 20);
+        // C. Seam -> Snow (Fade from solid white to transparent over 250px)
         snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 1, 1, 0, 0);
-        snowTransition.fillRect(-1000, -700, 2000, 300);
+        snowTransition.fillRect(-1000, -960, 2000, 250);
         snowTransition.setDepth(-999);
         snowTransition.setPipeline('Light2D');
 
-        // Forest to Desert (+700 Boundary)
+        // 2. Forest to Desert (Boundary: 700)
         const desertTransition = this.add.graphics();
-        // Use a lighter sandy tan color (0xe3bb76) to match the desert tiles better
-        // Start transparent at 400 and fade to solid sandy tan at 700 (300px fade into desert)
-        desertTransition.fillGradientStyle(0xe3bb76, 0xe3bb76, 0xe3bb76, 0xe3bb76, 0, 0, 1, 1);
-        desertTransition.fillRect(-1000, 400, 2000, 301); // 301 to ensure overlap
+        const desertColor = 0xe3bb76; // Sandy tan
+        // A. Forest -> Seam (Fade from transparent to solid sandy over 250px)
+        desertTransition.fillGradientStyle(desertColor, desertColor, desertColor, desertColor, 0, 0, 1, 1);
+        desertTransition.fillRect(-1000, 450, 2000, 250);
+        // B. THE SEAM BUFFER (Solid sandy strip to hide the tile edge)
+        desertTransition.fillStyle(desertColor, 1);
+        desertTransition.fillRect(-1000, 690, 2000, 20);
+        // C. Seam -> Desert (Fade from solid sandy to transparent over 250px)
+        desertTransition.fillGradientStyle(desertColor, desertColor, desertColor, desertColor, 1, 1, 0, 0);
+        desertTransition.fillRect(-1000, 710, 2000, 250);
         desertTransition.setDepth(-999);
         desertTransition.setPipeline('Light2D');
 

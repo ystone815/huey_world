@@ -174,6 +174,9 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
   - Created modern login/signup UI in `static/login.html`
   - Integrated authenticated data (nickname/skin) into the game join flow
   - Added logout functionality
+- **Object Interaction**:
+  - Implemented static physics collision for the bonfire and guestbook board
+  - Character can no longer pass through these entities
 - **Sprite Optimization**: 
   - Fixed cactus sprite: removed thick edges with clean transparent background
   - Fixed snow_tree sprite: removed background artifacts using magenta-bg generation method
@@ -183,8 +186,8 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
   - All biome objects now have proper trunk-only collision detection
 - **Rendering Fixes**:
   - Fixed character clipping at biome boundaries by excluding backgrounds from updateDepth()
-  - Set proper depth hierarchy: backgrounds (-1000/-999), transitions (-999), characters (Y-based)
-  - Added smooth gradient transitions between biomes (snow↔forest, forest↔desert)
+  - Set proper depth hierarchy: backgrounds (-1001 to -999), transitions (-999), characters (Y-based)
+  - Completely eliminated sharp biome edges by making Forest the global base layer and using wider (300px) centered gradients across Snow and Desert boundaries.
 - **Atmosphere & Polish**:
   - Brightened midnight ambient lighting for better visibility
   - Cleared 350px "safe zone" radius around bonfire by removing nearby trees
