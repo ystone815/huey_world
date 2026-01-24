@@ -1261,9 +1261,14 @@
         }
 
         function updateMinigame() {
-            // Smooth keyboard movement (Refined for 60FPS)
-            if (activeKeys['ArrowLeft'] || activeKeys['a']) playerX = Math.max(5, playerX - 1.2);
-            if (activeKeys['ArrowRight'] || activeKeys['d']) playerX = Math.min(95, playerX + 1.2);
+            // Unified Constant Velocity Movement (Keyboard + Mobile)
+            const speed = 1.0;
+            const isLeft = activeKeys['ArrowLeft'] || activeKeys['a'] || mobileMoveDir === 'left';
+            const isRight = activeKeys['ArrowRight'] || activeKeys['d'] || mobileMoveDir === 'right';
+
+            if (isLeft) playerX = Math.max(5, playerX - speed);
+            if (isRight) playerX = Math.min(95, playerX + speed);
+
             document.getElementById('arcade-player').style.left = playerX + '%';
 
             if (currentGameId === 'cactus_dodge') {
@@ -1315,16 +1320,11 @@
 
         function movePlayerMobile(dir) {
             if (!minigameActive) return;
-            stopPlayerMobile();
-            mobileMoveInterval = setInterval(() => {
-                if (dir === 'left') playerX = Math.max(5, playerX - 1.5);
-                if (dir === 'right') playerX = Math.min(95, playerX + 1.5);
-                document.getElementById('arcade-player').style.left = playerX + '%';
-            }, 16);
+            mobileMoveDir = dir;
         }
 
         function stopPlayerMobile() {
-            clearInterval(mobileMoveInterval);
+            mobileMoveDir = null;
         }
 
         window.movePlayerMobile = movePlayerMobile;
