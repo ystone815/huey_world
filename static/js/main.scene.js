@@ -55,19 +55,18 @@ export class MainScene extends Phaser.Scene {
 
         // Snow to Forest (-700 Boundary)
         const snowTransition = this.add.graphics();
-        // Fade snow color (solid white-ish) to transparent over the forest
-        // Covers Y: -850 to -550 (300px centered on -700)
-        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0x4a4a4a, 0x4a4a4a, 1, 1, 0, 0);
-        snowTransition.fillRect(-1000, -850, 2000, 300);
+        // Start solid white at -700 and fade to transparent at -400 (300px fade into forest)
+        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 1, 1, 0, 0);
+        snowTransition.fillRect(-1000, -700, 2000, 300);
         snowTransition.setDepth(-999);
         snowTransition.setPipeline('Light2D');
 
         // Forest to Desert (+700 Boundary)
         const desertTransition = this.add.graphics();
-        // Fade from forest ground color (transparent overlay) to solid desert color (#d2691e)
-        // Covers Y: 550 to 850 (300px centered on 700)
-        desertTransition.fillGradientStyle(0x4a4a4a, 0x4a4a4a, 0xd2691e, 0xd2691e, 0, 0, 1, 1);
-        desertTransition.fillRect(-1000, 550, 2000, 300);
+        // Use a lighter sandy tan color (0xe3bb76) to match the desert tiles better
+        // Start transparent at 400 and fade to solid sandy tan at 700 (300px fade into desert)
+        desertTransition.fillGradientStyle(0xe3bb76, 0xe3bb76, 0xe3bb76, 0xe3bb76, 0, 0, 1, 1);
+        desertTransition.fillRect(-1000, 400, 2000, 301); // 301 to ensure overlap
         desertTransition.setDepth(-999);
         desertTransition.setPipeline('Light2D');
 
