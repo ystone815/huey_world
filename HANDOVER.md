@@ -88,9 +88,17 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - **Item Stacking**: Same item types merge into a single slot with a quantity counter.
     - **Auto-Merge**: Existing duplicates are automatically merged upon login for organization.
     - **Asset Fallback**: Uses high-quality emojis if PNG assets are missing (prevents empty slots/404s).
-18. **Minigame & Leaderboard (In Progress)**:
-    - **Location**: Arcade machine area planned at `(300, 50)` near the Guestbook.
-    - **Storage**: `leaderboard` table added to `users.db` for global high score tracking.
+91. **Minigame Arcade**:
+    - **Location**: Arcade machine area at `(300, 50)`.
+    - **Games**: Cactus Dodge (Survival), Resource Rush (Collection), Math Blitz (Mental).
+    - **Global Rankings**: Global top 10 high-scores saved in `users.db`. 
+19. **World Building System (Minecraft-style)**:
+    - **Mechanic**: Use harvested resources to construct persistent objects in the world.
+    - **Grid-Snapping**: All buildings snap to a 48x48 pixel grid for clean alignment.
+    - **Persistence**: Buildings saved to `db/world/world.db` and visible to all players.
+    - **Structural Collision**: Wooden Fences and Stone Walls act as physical barriers.
+    - **Deconstruction**: "Remove Tool" allows dismantling owned structures with 100% material refund.
+    - **Real-time Sync**: Full Socket.IO integration for placement/removal broadcasts.
 
 
 
@@ -201,8 +209,18 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 - **Developer Operations**:
   - Successfully pushed all stable features to Github.
   - Updated project documentation and folder structure (`scripts/` organization).
-- **Infrastructure for Minigame**:
-  - Updated database schema for global leaderboards.
+- **Infrastructure for Minigame Release**:
+  - Launched fully playable Arcade Hub with 3 unique minigames.
+  - Implemented real-time global leaderboards with game-specific tabs.
+- **World Building & Deconstruction**:
+  - Built Minecraft-inspired building system with grid-snapped placement.
+  - Implemented secure backend resource deduction and validation.
+  - Added "Remove Tool" with total material refund and ownership security.
+  - Integrated real-time Socket.IO broadcasts for shared construction/demolition.
+- **Bug Fixes & Synchronization**:
+  - Fixed critical frontend syntax error that disabled lobby UI logic.
+  - Resolved inventory sync issue where built materials didn't appear spent until refresh.
+  - Standardized terminology across UI and backend (e.g., Snow Crystal, Cactus Fiber).
 
 
 ---
