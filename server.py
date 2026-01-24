@@ -330,10 +330,10 @@ async def submit_score(request: ScoreSubmitRequest):
         conn = get_user_db()
         cursor = conn.cursor()
         
-        # Verify token
+        # Verify token (matching naive string format used in login/verify-token)
         cursor.execute(
             "SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?",
-            (request.token, datetime.now(timezone.utc).isoformat())
+            (request.token, datetime.now().isoformat())
         )
         session = cursor.fetchone()
         if not session:
