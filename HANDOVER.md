@@ -168,6 +168,12 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 - [x] **Collision System**: Tree/object collision with trunk-only hitboxes
 
 ## ✅ Completed in this Session (Latest)
+- **User Authentication**: 
+  - Implemented secure ID/Password system with bcrypt hashing
+  - Added "Remember Me" auto-login using persistent session tokens
+  - Created modern login/signup UI in `static/login.html`
+  - Integrated authenticated data (nickname/skin) into the game join flow
+  - Added logout functionality
 - **Sprite Optimization**: 
   - Fixed cactus sprite: removed thick edges with clean transparent background
   - Fixed snow_tree sprite: removed background artifacts using magenta-bg generation method
@@ -179,7 +185,11 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
   - Fixed character clipping at biome boundaries by excluding backgrounds from updateDepth()
   - Set proper depth hierarchy: backgrounds (-1000/-999), transitions (-999), characters (Y-based)
   - Added smooth gradient transitions between biomes (snow↔forest, forest↔desert)
-- **Background Removal Tool**: Enhanced `remove_bg.py` with magenta-tinted pixel detection for anti-aliasing artifacts
+- **Atmosphere & Polish**:
+  - Brightened midnight ambient lighting for better visibility
+  - Cleared 350px "safe zone" radius around bonfire by removing nearby trees
+  - Adjusted bonfire light intensity and expanded 1.5x radius for softer coverage
+- **Project Structure**: Organized all utility scripts into the `scripts/` directory
 - **Cache Management**: Updated all sprite versions for proper browser cache invalidation
 
 
