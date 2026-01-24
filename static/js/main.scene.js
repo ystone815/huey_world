@@ -280,7 +280,7 @@ export class MainScene extends Phaser.Scene {
         // Add event listeners for emoji keys
         ['key1', 'key2', 'key3', 'key4'].forEach(key => {
             this.controls[key].on('down', () => {
-                if (!this.isJoined) return;
+                if (!this.isJoined || this.isTyping() || this.isAnyOverlayOpen()) return;
                 const emoji = this.emojiMap[key];
                 this.showEmojiPopup(this.playerContainer, emoji);
                 if (this.socketManager) {
@@ -291,7 +291,7 @@ export class MainScene extends Phaser.Scene {
 
         // Add inventory listener
         this.controls.inventory.on('down', () => {
-            if (this.isJoined) {
+            if (this.isJoined && !this.isTyping()) {
                 this.toggleInventory();
             }
         });
@@ -511,6 +511,22 @@ export class MainScene extends Phaser.Scene {
             const isVisible = overlay.style.display === 'flex';
             overlay.style.display = isVisible ? 'none' : 'flex';
         }
+    }
+
+    isTyping() {
+        return document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
+    }
+
+    isAnyOverlayOpen() {
+        const lobbyOverlay = document.getElementById('lobby-overlay');
+        const invOverlay = document.getElementById('inventory-overlay');
+        const gbOverlay = document.getElementById('guestbook-overlay');
+
+        const isLobbyOpen = lobbyOverlay && (lobbyOverlay.style.display !== 'none' && lobbyOverlay.style.opacity !== '0');
+        const isInventoryOpen = invOverlay && invOverlay.style.display === 'flex';
+        const isGbOpen = gbOverlay && gbOverlay.style.display === 'flex';
+
+        return isLobbyOpen || isInventoryOpen || isGbOpen;
     }
 
     showEmojiPopup(container, emoji) {
@@ -753,21 +769,11 @@ export class MainScene extends Phaser.Scene {
         body.setVelocity(0);
 
         // --- INPUT BLOCK (Nickname, Guestbook, Inventory) ---
-        // 1. Check if any HTML input or textarea has focus
-        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+        if (this.isTyping()) {
             return;
         }
 
-        // 2. Block movement if Overlays are open (even if not focused)
-        const lobbyOverlay = document.getElementById('lobby-overlay');
-        const invOverlay = document.getElementById('inventory-overlay');
-        const gbOverlay = document.getElementById('guestbook-overlay');
-
-        const isLobbyOpen = lobbyOverlay && (lobbyOverlay.style.display !== 'none' && lobbyOverlay.style.opacity !== '0');
-        const isInventoryOpen = invOverlay && invOverlay.style.display === 'flex';
-        const isGbOpen = gbOverlay && gbOverlay.style.display === 'flex';
-
-        if (isLobbyOpen || isInventoryOpen || isGbOpen) {
+        if (this.isAnyOverlayOpen()) {
             // Still run depth and minimap updates, but skip movement input
             this.updateMinimap();
             this.updateDepth();
