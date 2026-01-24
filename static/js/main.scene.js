@@ -1750,25 +1750,39 @@ export class MainScene extends Phaser.Scene {
             this.isBuilding = true;
             this.buildType = data.type;
 
-            // Create ghost preview
-            const emojiMap = { 'fence_wood': '🪵', 'wall_stone': '🧱', 'bonfire': '🔥' };
-            this.ghostObject = this.add.text(0, 0, emojiMap[this.buildType], { fontSize: '40px' })
-                .setOrigin(0.5)
-                .setAlpha(0.6)
-                .setDepth(2000);
+            if (this.buildType === 'remove') {
+                this.showFloatingNote("Remove Mode: Click an object to dismantle");
+                // Create a special hammer or X ghost?
+                this.ghostObject = this.add.text(0, 0, '❌', { fontSize: '40px' })
+                    .setOrigin(0.5)
+                    .setAlpha(0.6)
+                    .setDepth(2000);
+            } else {
+                // Create ghost preview
+                const emojiMap = { 'fence_wood': '🪵', 'wall_stone': '🧱', 'bonfire': '🔥' };
+                this.ghostObject = this.add.text(0, 0, emojiMap[this.buildType], { fontSize: '40px' })
+                    .setOrigin(0.5)
+                    .setAlpha(0.6)
+                    .setDepth(2000);
 
-            this.showFloatingNote("Build Mode: Click to Place");
+                this.showFloatingNote("Build Mode: Click to Place");
+            }
         });
 
-        // 2. Click to place
+        // 2. Click to act
         this.input.on('pointerdown', (pointer) => {
             if (!this.isBuilding || !this.ghostObject) return;
+            if (pointer.button !== 0) return; // Left click only
 
             const worldPoint = pointer.positionToCamera(this.cameras.main);
             const gx = Math.round(worldPoint.x / this.gridSize) * this.gridSize;
             const gy = Math.round(worldPoint.y / this.gridSize) * this.gridSize;
 
-            this.requestPlaceObject(this.buildType, gx, gy);
+            if (this.buildType === 'remove') {
+                this.requestRemoveObject(gx, gy);
+            } else {
+                this.requestPlaceObject(this.buildType, gx, gy);
+            }
         });
 
         // 3. Movement for ghost
@@ -1820,6 +1834,8 @@ export class MainScene extends Phaser.Scene {
         const txt = this.add.text(obj.x, obj.y, emojiMap[obj.type] || '❓', { fontSize: '40px' })
             .setOrigin(0.5)
             .setDepth(obj.y + 100) // Simple Y-sorting
+            .setData('x', obj.x)  // Store grid coords for easy lookup
+            .setData('y', obj.y)
             .setPipeline('Light2D');
 
         this.placedObjectsGroup.add(txt);
@@ -1851,14 +1867,37 @@ export class MainScene extends Phaser.Scene {
             if (data.success) {
                 this.showFloatingNote("Constructed!");
                 this.cancelBuild();
-
-                // CRITICAL: Refresh local inventory from server to reflect deduction
                 this.fetchInventoryFromServer();
-
-                // Refresh inventory UI if visible
-                if (window.updateInventoryUI) window.updateInventoryUI();
             } else {
                 this.showFloatingNote(`Build Failed: ${data.detail}`);
+            }
+        } catch (e) {
+            this.showFloatingNote("Server Error");
+        }
+    }
+
+    async requestRemoveObject(x, y) {
+        const token = localStorage.getItem('hueyworld_token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/world/remove', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: token,
+                    x: x,
+                    y: y
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.showFloatingNote("Dismantled!");
+                this.cancelBuild();
+                this.fetchInventoryFromServer(); // Refunded
+            } else {
+                this.showFloatingNote(`${data.detail}`);
             }
         } catch (e) {
             this.showFloatingNote("Server Error");
@@ -1869,12 +1908,20 @@ export class MainScene extends Phaser.Scene {
         // Check if already exists (basic deduplication)
         let exists = false;
         this.placedObjectsGroup.getChildren().forEach(child => {
-            if (child.x === data.x && child.y === data.y) exists = true;
+            if (child.getData('x') === data.x && child.getData('y') === data.y) exists = true;
         });
 
         if (!exists) {
             this.renderPlacedObject(data);
         }
+    }
+
+    handleObjectRemoved(data) {
+        this.placedObjectsGroup.getChildren().forEach(child => {
+            if (child.getData('x') === data.x && child.getData('y') === data.y) {
+                child.destroy();
+            }
+        });
     }
 
 }

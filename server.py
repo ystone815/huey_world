@@ -71,6 +71,11 @@ class PlaceObjectRequest(BaseModel):
     x: float
     y: float
 
+class RemoveObjectRequest(BaseModel):
+    token: str
+    x: float
+    y: float
+
 # User Database Path
 USER_DB_PATH = 'db/user/users.db'
 WORLD_DB_PATH = 'db/world/world.db'
@@ -504,6 +509,99 @@ async def place_object(request: PlaceObjectRequest):
         raise
     except Exception as e:
         print(f"Place object error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/world/remove")
+async def remove_object(request: RemoveObjectRequest):
+    """Remove an object from the world and refund resources"""
+    try:
+        # 1. Verify Authentication
+        user_conn = get_user_db()
+        user_cursor = user_conn.cursor()
+        
+        user_cursor.execute(
+            "SELECT u.id, u.username FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ? AND s.expires_at > ?",
+            (request.token, datetime.now().isoformat())
+        )
+        user_session = user_cursor.fetchone()
+        
+        if not user_session:
+            user_conn.close()
+            raise HTTPException(status_code=401, detail="Unauthorized")
+            
+        user_id, username = user_session
+        
+        # 2. Find Object and Check Ownership
+        world_conn = get_world_db()
+        world_cursor = world_conn.cursor()
+        # Find object at target coordinates (allow small epsilon? grid is 48, so exact match is fine)
+        world_cursor.execute(
+            "SELECT type, owner_username FROM placed_objects WHERE x = ? AND y = ?",
+            (request.x, request.y)
+        )
+        obj_row = world_cursor.fetchone()
+        
+        if not obj_row:
+            user_conn.close()
+            world_conn.close()
+            raise HTTPException(status_code=404, detail="Object not found at these coordinates")
+            
+        obj_type, owner = obj_row
+        
+        # Ownership check: for now, only allow owner to remove. 
+        # (Alternatively, allow admin or just let anyone break it? Let's stick with owner for now)
+        if owner != username:
+             user_conn.close()
+             world_conn.close()
+             raise HTTPException(status_code=403, detail="You do not own this object")
+
+        # 3. Refund Resources
+        if obj_type in BUILD_COSTS:
+            costs = BUILD_COSTS[obj_type]
+            for item_id, qty in costs.items():
+                # Add back to inventory
+                # Check if user has item row already
+                user_cursor.execute(
+                    "SELECT quantity FROM inventory WHERE user_id = ? AND item_id = ?",
+                    (user_id, item_id)
+                )
+                item_row = user_cursor.fetchone()
+                if item_row:
+                    user_cursor.execute(
+                        "UPDATE inventory SET quantity = quantity + ? WHERE user_id = ? AND item_id = ?",
+                        (qty, user_id, item_id)
+                    )
+                else:
+                    # Find empty slot
+                    user_cursor.execute("SELECT slot_index FROM inventory WHERE user_id = ?", (user_id,))
+                    slots = [r[0] for r in user_cursor.fetchall()]
+                    target_slot = 0
+                    for i in range(40):
+                        if i not in slots:
+                            target_slot = i
+                            break
+                    user_cursor.execute(
+                        "INSERT INTO inventory (user_id, item_id, quantity, slot_index) VALUES (?, ?, ?, ?)",
+                        (user_id, item_id, qty, target_slot)
+                    )
+        
+        # 4. Delete from World DB
+        world_cursor.execute("DELETE FROM placed_objects WHERE x = ? AND y = ?", (request.x, request.y))
+        
+        user_conn.commit()
+        world_conn.commit()
+        user_conn.close()
+        world_conn.close()
+        
+        # 5. Broadcast removal
+        await sio.emit('object_removed', {"x": request.x, "y": request.y})
+        
+        return {"success": True, "message": "Object removed and materials refunded"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Remove object error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

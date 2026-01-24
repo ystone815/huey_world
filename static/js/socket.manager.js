@@ -228,6 +228,13 @@ export class SocketManager {
                 this.scene.handleObjectPlaced(data);
             }
         });
+
+        this.socket.on('object_removed', (data) => {
+            console.log("Socket: Object removed", data);
+            if (this.scene.handleObjectRemoved) {
+                this.scene.handleObjectRemoved(data);
+            }
+        });
     }
 
     emitMove(x, y) {
