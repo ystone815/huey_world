@@ -1056,25 +1056,26 @@
 
             <div class="build-grid" id="build-menu-grid">
                 <!-- Wooden Fence -->
-                <div class="build-item" onclick="startPlacement('fence_wood')">
+                <div class="build-item" id="build-item-fence_wood" onclick="startPlacement('fence_wood')">
                     <span class="build-icon">🪵</span>
                     <span class="build-name">Wooden Fence</span>
                     <span class="build-cost">Cost: 2 Wood</span>
                 </div>
                 <!-- Stone Wall -->
-                <div class="build-item" onclick="startPlacement('wall_stone')">
+                <div class="build-item" id="build-item-wall_stone" onclick="startPlacement('wall_stone')">
                     <span class="build-icon">🧱</span>
                     <span class="build-name">Stone Wall</span>
                     <span class="build-cost">Cost: 2 Snow Crystal</span>
                 </div>
                 <!-- Bonfire -->
-                <div class="build-item" onclick="startPlacement('bonfire')">
+                <div class="build-item" id="build-item-bonfire" onclick="startPlacement('bonfire')">
                     <span class="build-icon">🔥</span>
                     <span class="build-name">Bonfire</span>
                     <span class="build-cost">Cost: 1 Wood, 1 Cactus Fiber</span>
                 </div>
                 <!-- Remove Tool -->
-                <div class="build-item" onclick="startPlacement('remove')" style="border-color: #e57373;">
+                <div class="build-item" id="build-item-remove" onclick="startPlacement('remove')"
+                    style="border-color: #e57373;">
                     <span class="build-icon">🔨❌</span>
                     <span class="build-name" style="color: #e57373;">Remove Tool</span>
                     <span class="build-cost">Refund Materials</span>
@@ -1261,17 +1262,75 @@
         });
 
         // Build UI Logic
+        const BUILD_COSTS = {
+            'fence_wood': { 'wood': 2 },
+            'wall_stone': { 'snow_crystal': 2 },
+            'bonfire': { 'wood': 1, 'cactus_fiber': 1 }
+        };
+
         function toggleBuildMenu() {
             const overlay = document.getElementById('build-overlay');
             const isVisible = overlay.style.display === 'flex';
             overlay.style.display = isVisible ? 'none' : 'flex';
 
-            // If opening, refresh cost availability (optional polish)
+            if (overlay.style.display === 'flex') {
+                updateBuildMenuAffordability();
+            }
         }
 
         window.toggleBuildMenu = toggleBuildMenu;
 
+        function updateBuildMenuAffordability() {
+            if (!window.phaserGame) return;
+            const scene = window.phaserGame.scene.getScene('MainScene');
+            if (!scene) return;
+
+            const inventory = scene.inventory || [];
+
+            for (const [id, costs] of Object.entries(BUILD_COSTS)) {
+                const itemEl = document.getElementById(`build-item-${id}`);
+                if (!itemEl) continue;
+
+                let canAfford = true;
+                for (const [item_id, qty] of Object.entries(costs)) {
+                    const invItem = inventory.find(it => it.item_id === item_id);
+                    if (!invItem || invItem.quantity < qty) {
+                        canAfford = false;
+                        break;
+                    }
+                }
+
+                if (canAfford) {
+                    itemEl.classList.remove('disabled');
+                } else {
+                    itemEl.classList.add('disabled');
+                }
+            }
+        }
+
         function startPlacement(type) {
+            if (type !== 'remove') {
+                // Check affordability before starting
+                if (!window.phaserGame) return;
+                const scene = window.phaserGame.scene.getScene('MainScene');
+                const inventory = (scene && scene.inventory) ? scene.inventory : [];
+                const costs = BUILD_COSTS[type];
+
+                let canAfford = true;
+                for (const [item_id, qty] of Object.entries(costs)) {
+                    const invItem = inventory.find(it => it.item_id === item_id);
+                    if (!invItem || invItem.quantity < qty) {
+                        canAfford = false;
+                        break;
+                    }
+                }
+
+                if (!canAfford) {
+                    if (scene && scene.showFloatingNote) scene.showFloatingNote("Not enough materials!", true);
+                    return;
+                }
+            }
+
             toggleBuildMenu(); // Close menu
 
             if (window.phaserGame) {
