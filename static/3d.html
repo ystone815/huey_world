@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huey3D - Voxel Prototype</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #4db6ac;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .controls-hint {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #b2dfdb;
+        }
+
+        kbd {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 2px 5px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ui">
+        <h2 style="margin: 0; color: #4db6ac;">🦊 Huey3D Prototype</h2>
+        <p style="margin: 5px 0 0 0; font-size: 14px;">Minecraft-style Voxel Builder</p>
+        <div class="controls-hint">
+            <p><kbd>Left Click</kbd> Place Block</p>
+            <p><kbd>Right Click</kbd> Remove Block</p>
+            <p><kbd>Drag</kbd> Rotate View</p>
+            <p><kbd>Scroll</kbd> Zoom</p>
+        </div>
+    </div>
+
+    <!-- Import Three.js via CDN -->
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.156.1/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.156.1/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- 1. Scene Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Sky blue
+
+        // Fog for depth
+        scene.fog = new THREE.Fog(0x87ceeb, 20, 100);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(10, 10, 10);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // --- 2. Lighting ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 10);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        // --- 3. Voxel Geometry ---
+        const gridSize = 50;
+        const cellSize = 1;
+
+        // Ground Plane (Invisible or Grid)
+        const gridHelper = new THREE.GridHelper(gridSize, gridSize, 0x000000, 0xdddddd);
+        scene.add(gridHelper);
+
+        const planeGeo = new THREE.PlaneGeometry(gridSize, gridSize);
+        const planeMat = new THREE.ShadowMaterial({ opacity: 0.1 });
+        const plane = new THREE.Mesh(planeGeo, planeMat);
+        plane.rotation.x = -Math.PI / 2;
+        plane.receiveShadow = true;
+        scene.add(plane);
+
+        const objects = []; // For raycasting
+        objects.push(plane);
+
+        // Preview Ghost
+        const ghostGeo = new THREE.BoxGeometry(cellSize, cellSize, cellSize);
+        const ghostMat = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.5, transparent: true });
+        const ghostMesh = new THREE.Mesh(ghostGeo, ghostMat);
+        scene.add(ghostMesh);
+
+        // Materials for blocks
+        const blockMat = new THREE.MeshLambertMaterial({ color: 0x4db6ac });
+
+        // --- 4. Interaction ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('mousemove', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(objects);
+
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                ghostMesh.position.copy(intersect.point).add(intersect.face.normal);
+                ghostMesh.position.divideScalar(cellSize).floor().multiplyScalar(cellSize).addScalar(cellSize / 2);
+            }
+        });
+
+        window.addEventListener('mousedown', (event) => {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(objects);
+
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+
+                // Left Click: Place
+                if (event.button === 0) {
+                    const voxel = new THREE.Mesh(ghostGeo, blockMat);
+                    voxel.castShadow = true;
+                    voxel.receiveShadow = true;
+
+                    voxel.position.copy(intersect.point).add(intersect.face.normal);
+                    voxel.position.divideScalar(cellSize).floor().multiplyScalar(cellSize).addScalar(cellSize / 2);
+
+                    scene.add(voxel);
+                    objects.push(voxel);
+                }
+
+                // Right Click: Remove
+                if (event.button === 2 && intersect.object !== plane) {
+                    scene.remove(intersect.object);
+                    objects.splice(objects.indexOf(intersect.object), 1);
+                }
+            }
+        });
+
+        // Prevent context menu on right click
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        console.log("3D Scene Initialized!");
+    </script>
+</body>
+
+</html>
