@@ -213,6 +213,12 @@ export class SocketManager {
                 }
             }
         });
+
+        // Show Emoji Event
+        this.socket.on('show_emoji', (data) => {
+            console.log("Socket: Received show_emoji", data);
+            this.scene.events.emit('show-remote-emoji', data);
+        });
     }
 
     emitMove(x, y) {
@@ -222,6 +228,12 @@ export class SocketManager {
         }
         // console.log("Emitting Move:", x, y); // Verbose
         this.socket.emit('player_move', { x, y });
+    }
+
+    emitEmoji(emoji) {
+        if (!this.socket.connected) return;
+        console.log("Emitting Emoji:", emoji);
+        this.socket.emit('show_emoji', { emoji });
     }
 
     updateGuestbookUI(messages) {

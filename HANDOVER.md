@@ -28,10 +28,13 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - Coordinates: `-1000` to `1000` (Center is `0,0`).
     - **Background**: Seamless dirt ground tile (no borders).
     - **Safe Zone**: `150px` radius at the center (no trees spawn here).
-3.  **Movement & Physics**: 
-    - **Quadrant-Limited Dynamic Joystick**: Active only in the bottom-left quadrant (3rd quadrant) to keep the right side free for interactions.
-    - **Joystick Scale**: Reduced radius to `30px` for a compact UI.
-    - Physics: Arcade Physics with world bound collision.
+3.  31: **Movement & Physics**: 
+32:     - **Quadrant-Limited Dynamic Joystick**: Active only in the bottom-left quadrant (3rd quadrant).
+33:     - **Joystick Scale**: Reduced radius to `30px` for a compact UI.
+34:     - **Tree Collisions**: Trees are part of a `StaticPhysicsGroup`. Collision boxes are optimized to the **trunk only** (20x20px), allowing players to walk behind leaves for a 3D feel.
+35:     - Physics: Arcade Physics with world bound collision.
+36:     - **Bobbing Animation**: Procedural "bounce" and "tilt" effects when moving (Players and NPCs).
+37:     - **Visual Directionality**: Character sprites flip horizontally based on movement direction (Left/Right).
 
 4.  **Visuals**:
     - **Y-Sorting**: Custom `updateDepth()` ensures characters appear behind trees when "above" them.
@@ -40,6 +43,7 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - **Minimap** (Top-Right, 150x150px):
       - Shows entire 2000x2000 world scaled down.
       - **Sync indicators**: Green dot (Me), Orange dots (Others), Green circle (Safe zone).
+      - **Enhanced Dots**: Trees (Dark Green) and NPCs (Specific colors) are visible for better awareness.
       - Fixed issue with duplicate minimaps.
     - **Debug Overlay**: Shows FPS, Position, Input, and Socket ID.
 6.  **Guestbook (Bulletin Board)**:
@@ -61,12 +65,17 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - **Lighting**: Phaser 2D Light pipeline enabled for all sprites.
     - **Ambient**: Transitions between Midnight (Dark), Dawn (Purple), Noon (Bright), and Dusk (Orange).
     - **Clock**: 24-hour digital clock display below the minimap.
-12. **Enhanced Minimap Visibility**:
-    - **Trees & NPCs**: Displayed as dots on the map.
-    - **Click-to-Expand**: Clicking the minimap background toggles its size (animated transition) for better visibility.
-    - **Players**: Green (self) and Orange (others) dots.
-12. **Character Refinements**:
-    - **Panda Skin Fix**: Restored opacity (Alpha 255) to 30,000+ white fur pixels.
+13. **Biomes & Terrain Expansion**:
+    - **Snow Biome (Top)**: Snowy ground and trees at `Y < -700`.
+    - **Desert Biome (Bottom)**: Sandy ground and cacti at `Y > 700`.
+    - **Density**: Tree count increased to `120` for a more lush/populated world.
+14. **Visual Juice (FX)**:
+    - **Dust**: Walking creates dust clouds at feet.
+    - **Sparks**: Bonfire emits animated fire sparks.
+    - **Health Bars**: Color-coded HP bars (Green/Yellow/Red) synced for all players and NPCs. Positioned higher for players (-40px) to avoid name overlap.
+15. **Refined Interactions**:
+    - **Input Collision Fix**: Phaser key capture disabled when typing in HTML inputs (Nickname, Guestbook).
+    - **Guestbook**: Click-to-open removed; now strictly proximity-based (2s cooldown) to prevent accidental clicks. 
 
 
 
@@ -81,11 +90,11 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 
 ## 🗺️ Next Steps (Brainstormed Ideas)
 1.  **Visual Juice**:
-    - [ ] **Particle Effects**: Dust on walking, fire sparks, rain/snow.
-    - [ ] **Environmental Life**: More reactive entities (e.g., squirrels, birds).
+    - [x] **Particle Effects**: Dust on walking, fire sparks (Completed).
+    - [/] **Environmental Life**: NPCs (Roach/Sheep) wander the world (In-progress).
     - [ ] **Weather System**: Occasional rainy phases affecting lighting.
 2.  **Social & Expression**:
-    - [ ] **Emoji Popups**: Numbers 1-4 triggers emoji bubbles above head (High Priority).
+    - [x] **Emoji Popups**: Numbers 1-4 triggers emoji bubbles above head (Completed).
     - [ ] **Global Chat**: Real-time communication bar.
     - [ ] **Titles**: Achievement-based labels (e.g., "Night Owl").
 
@@ -96,16 +105,14 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - [ ] **BGM/SFX**: Atmospheric forest music and walking sound effects.
 
 ## ✅ Completed in this Session (Latest)
-- **Day/Night System**: Implemented 5-minute cycle with Phaser 2D lighting and ambient color shifts.
-- **Game Clock**: Added 24-hour UI display below the minimap (00:00 synchronized with server).
-- **NPC System**: Added wandering Roach and Sheep with server-side logic and multiplayer sync.
-- **Panda Skin Fix**: Restored opacity to white fur areas via custom processing script.
-- **Lighting Refinement**: Doubled bonfire range (400px), removed player self-light, and darkened night phase.
-- **Input Refinement**: Implemented quadrant-limited dynamic joystick (30px) and switched desktop controls to WASD.
-- **Camera Zoom**: Added automatic mobile-zoom detection and manual UI controls for field-of-view adjustment (REMOVED: User requested removal due to functionality issues).
-- **Minimap Enhancement**: Added trees (dark green) and NPCs (yellow) to the minimap with real-time sync for entities.
-- **Nicknames**: Fixed uniqueness logic on server with real-time feedback in lobby UI.
-- **Bug Fixes**: Resolved code duplication and refined event listeners in `socket.manager.js`.
+- **Visual FX**: Added real-time health bars (synced) and movement dust/fire sparks.
+- **World Expansion**: Implemented Snow and Desert biomes with unique textures and objects (Cactus, Snow Tree).
+- **Terrain Density**: Doubled total tree/object count (120) and triggered map regeneration.
+- **Interaction Polish**: Fixed WASD input collision in UI fields and made guestbook proximity-only.
+- **Atmosphere**: Smoothed bonfire animation (slowed duration x5) and lightened nighttime ambient for better visibility.
+- **Character Refinement**: Raised player health bar height to -40px; added bobbing/tilting animations.
+- **Physics**: Implemented tree collisions with optimized "trunk-only" hitboxes.
+- **Minimap**: Added tree and NPC indicators for better world overview.
 
 
 

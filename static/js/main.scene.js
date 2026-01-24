@@ -9,16 +9,22 @@ export class MainScene extends Phaser.Scene {
         // Load the plugin formally via Phaser Loader to ensure it's ready
         this.load.plugin('rexvirtualjoystickplugin', 'static/js/vendor/rexvirtualjoystickplugin.min.js', true);
 
-        this.load.image('character', 'static/assets/character.png');
-        this.load.image('skin_fox', 'static/assets/skin_fox.png');
-        this.load.image('skin_cat', 'static/assets/skin_cat.png');
-        this.load.image('skin_dog', 'static/assets/skin_dog.png');
-        this.load.image('skin_panda', 'static/assets/skin_panda.png');
+        this.load.image('character', 'static/assets/character.png?v=2');
+        this.load.image('skin_fox', 'static/assets/skin_fox.png?v=2');
+        this.load.image('skin_cat', 'static/assets/skin_cat.png?v=2');
+        this.load.image('skin_dog', 'static/assets/skin_dog.png?v=2');
+        this.load.image('skin_panda', 'static/assets/skin_panda.png?v=2');
         this.load.image('tree', 'static/assets/tree.png');
 
         this.load.image('bonfire', 'static/assets/bonfire.png');
 
         this.load.image('ground', 'static/assets/ground.png');
+        this.load.image('snow_ground', 'static/assets/snow_ground.png');
+        this.load.image('desert_ground', 'static/assets/desert_ground.png');
+
+        // New Biome Assets
+        this.load.image('snow_tree', 'static/assets/snow_tree.png');
+        this.load.image('cactus', 'static/assets/cactus.png');
 
         // NPCs
         this.load.image('npc_roach', 'static/assets/npc_roach.png');
@@ -30,10 +36,17 @@ export class MainScene extends Phaser.Scene {
         console.log("MainScene Created");
 
         // 0. Create Background (Forest Ground)
-        // Background covers -1000 to 1000. 
-        // Placing at -1000, -1000 with Origin 0 covers the area.
-        this.ground = this.add.tileSprite(-1000, -1000, 2000, 2000, 'ground').setOrigin(0);
+        // Main world ground
+        this.ground = this.add.tileSprite(-1000, -700, 2000, 1400, 'ground').setOrigin(0);
         this.ground.setPipeline('Light2D');
+
+        // Snow Biome (Top)
+        this.snowGround = this.add.tileSprite(-1000, -1000, 2000, 300, 'snow_ground').setOrigin(0);
+        this.snowGround.setPipeline('Light2D');
+
+        // Desert Biome (Bottom)
+        this.desertGround = this.add.tileSprite(-1000, 700, 2000, 300, 'desert_ground').setOrigin(0);
+        this.desertGround.setPipeline('Light2D');
 
 
         // 1. Generate Texture proceduraly
@@ -66,12 +79,14 @@ export class MainScene extends Phaser.Scene {
         this.player = this.add.image(0, 0, 'character');
         this.player.setDisplaySize(48, 48); // Scale it nicely
 
-        // Text
         this.playerText = this.add.text(0, -35, this.nickname, {
             font: '14px Arial',
             fill: '#ffffff',
             align: 'center'
         }).setOrigin(0.5);
+
+        // Health Bar (Moved higher for player visibility)
+        this.createHealthBar(this.playerContainer, 40, 6, -40);
 
         this.playerContainer.add([this.playerShadow, this.player, this.playerText]);
         this.playerContainer.setSize(32, 32);
@@ -102,13 +117,8 @@ export class MainScene extends Phaser.Scene {
         const boardLabel = this.add.text(0, 25, "GUESTBOOK", { font: '10px Arial', align: 'center' }).setOrigin(0.5);
         this.board.add([boardBase, boardTop, boardText, boardLabel]);
         this.board.setSize(50, 80);
-        this.board.setInteractive(new Phaser.Geom.Rectangle(-25, -40, 50, 80), Phaser.Geom.Rectangle.Contains);
 
-        this.board.on('pointerdown', () => {
-            if (this.isJoined) {
-                document.getElementById('guestbook-overlay').style.display = 'flex';
-            }
-        });
+        // Interaction removed as per user request (Now only opens via proximity)
 
         // 2.2.5 Bonfire (Near Spawn)
         // Position: (80, 50) - A bit aside from 0,0
@@ -120,25 +130,25 @@ export class MainScene extends Phaser.Scene {
 
 
         // Add simple light/flicker effect
-        // 1. Scale Tween (Breathing)
+        // 1. Scale Tween (Breathing) - Slowed down
         this.tweens.add({
             targets: this.bonfire,
-            scaleX: 1.05 * (48 / this.bonfire.width), // Relative scale adjustment
+            scaleX: 1.05 * (48 / this.bonfire.width),
             scaleY: 1.05 * (48 / this.bonfire.height),
-            duration: 500,
+            duration: 1200, // Increased from 500
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut'
         });
 
-        // 2. Alpha Tween (Flickering)
+        // 2. Alpha Tween (Flickering) - Extremely slow
         this.tweens.add({
             targets: this.bonfire,
             alpha: 0.8,
-            duration: 100,
+            duration: 1000, // Increased from 400
             yoyo: true,
             repeat: -1,
-            ease: 'Elastic.easeInOut'
+            ease: 'Sine.easeInOut'
         });
 
         // 3. Light Glow (Circle behind)
@@ -200,6 +210,11 @@ export class MainScene extends Phaser.Scene {
             }
             this.playerText.setText(this.nickname);
 
+            // Update my health bar
+            if (data.hp !== undefined && data.max_hp !== undefined) {
+                this.updateHealthBar(this.playerContainer, data.hp, data.max_hp);
+            }
+
             // Notify HTML UI
             window.dispatchEvent(new CustomEvent('lobby-hide'));
 
@@ -226,6 +241,7 @@ export class MainScene extends Phaser.Scene {
 
 
         // 3. Setup Input (WASD + Arrows)
+        // Set enableCapture: false to allow keys to propagate to HTML inputs (Nickname, Guestbook)
         this.controls = this.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.W,
             down: Phaser.Input.Keyboard.KeyCodes.S,
@@ -234,9 +250,51 @@ export class MainScene extends Phaser.Scene {
             up2: Phaser.Input.Keyboard.KeyCodes.UP,
             down2: Phaser.Input.Keyboard.KeyCodes.DOWN,
             left2: Phaser.Input.Keyboard.KeyCodes.LEFT,
-            right2: Phaser.Input.Keyboard.KeyCodes.RIGHT
+            right2: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+            key1: Phaser.Input.Keyboard.KeyCodes.ONE,
+            key2: Phaser.Input.Keyboard.KeyCodes.TWO,
+            key3: Phaser.Input.Keyboard.KeyCodes.THREE,
+            key4: Phaser.Input.Keyboard.KeyCodes.FOUR,
+            inventory: Phaser.Input.Keyboard.KeyCodes.E
+        }, false, false);
+        console.log("Controls Initialized: WASD + Arrows + Emojis(1-4) + Inventory(E) (Capture Disabled)");
+
+        // Emoji mappings
+        this.emojiMap = {
+            key1: '❤️',
+            key2: '😂',
+            key3: '😮',
+            key4: '🔥'
+        };
+
+        // Handle remote emoji event
+        this.events.on('show-remote-emoji', (data) => {
+            const sid = data.sid;
+            const emoji = data.emoji;
+            const container = this.otherPlayers[sid];
+            if (container) {
+                this.showEmojiPopup(container, emoji);
+            }
         });
-        console.log("Controls Initialized: WASD + Arrows");
+
+        // Add event listeners for emoji keys
+        ['key1', 'key2', 'key3', 'key4'].forEach(key => {
+            this.controls[key].on('down', () => {
+                if (!this.isJoined) return;
+                const emoji = this.emojiMap[key];
+                this.showEmojiPopup(this.playerContainer, emoji);
+                if (this.socketManager) {
+                    this.socketManager.emitEmoji(emoji);
+                }
+            });
+        });
+
+        // Add inventory listener
+        this.controls.inventory.on('down', () => {
+            if (this.isJoined) {
+                this.toggleInventory();
+            }
+        });
 
         // 4. Virtual Joystick (Dynamic / Floating)
         console.log("Preparing Dynamic Joystick...");
@@ -287,6 +345,7 @@ export class MainScene extends Phaser.Scene {
             this.joyCursors = this.joyStick.createCursorKeys();
 
             // Limited Dynamic Joystick Logic
+            let joystickPointerId = null;
             this.input.on('pointerdown', (pointer) => {
                 if (!this.isJoined) return;
 
@@ -294,15 +353,19 @@ export class MainScene extends Phaser.Scene {
                 const isBottomLeft = pointer.x < this.scale.width / 2 && pointer.y > this.scale.height / 2;
 
                 if (isBottomLeft) {
+                    joystickPointerId = pointer.id;
                     this.joyStick.setPosition(pointer.x, pointer.y);
                     this.joyStick.setVisible(true);
                     this.joyStick.setEnable(true);
                 }
             });
 
-            this.input.on('pointerup', () => {
-                this.joyStick.setVisible(false);
-                this.joyStick.setEnable(false);
+            this.input.on('pointerup', (pointer) => {
+                if (pointer.id === joystickPointerId) {
+                    this.joyStick.setVisible(false);
+                    this.joyStick.setEnable(false);
+                    joystickPointerId = null;
+                }
             });
 
             console.log("Quadrant-Limited Dynamic Joystick Configured");
@@ -319,7 +382,212 @@ export class MainScene extends Phaser.Scene {
         // 6. Camera Setup & Zoom Defaults
         this.cameras.main.setZoom(1.0);
 
+        // 6.1 Enable Multi-Touch (Increase active pointers)
+        this.input.addPointer(4); // Supports up to 5 concurrent touches
 
+        // 7. Mobile Emoji Radial Menu
+        this.createMobileEmojiMenu();
+    }
+
+    createMobileEmojiMenu() {
+        // Only show on mobile or small screens
+        const isMobile = this.sys.game.device.os.android || this.sys.game.device.os.iOS || window.innerWidth < 768;
+        if (!isMobile) return;
+
+        console.log("Creating Mobile Emoji Radial Menu");
+
+        const screenWidth = this.scale.width;
+        const screenHeight = this.scale.height;
+        const btnRadius = 28;
+        const margin = 20;
+
+        // Position: Bottom-Right
+        const x = screenWidth - btnRadius - margin;
+        const y = screenHeight - btnRadius - margin;
+
+        // 1. Main Button
+        const btnBase = this.add.circle(x, y, btnRadius, 0x444444, 0.8).setScrollFactor(0).setDepth(2000).setInteractive();
+        const btnIcon = this.add.text(x, y, '❤️', { fontSize: '24px' }).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
+        btnBase.setStrokeStyle(2, 0xffffff);
+
+        // 2. Radial Menu Container
+        const menuContainer = this.add.container(x, y).setScrollFactor(0).setDepth(2010).setVisible(false);
+        const menuBg = this.add.circle(0, 0, 80, 0x000000, 0.4).setStrokeStyle(1, 0x888888);
+
+        const emojis = [
+            { char: '😂', dx: 0, dy: -60, dir: 'north' },
+            { char: '❤️', dx: 0, dy: 60, dir: 'south' },
+            { char: '🔥', dx: 60, dy: 0, dir: 'east' },
+            { char: '😮', dx: -60, dy: 0, dir: 'west' }
+        ];
+
+        const emojiObjs = {};
+        emojis.forEach(e => {
+            const txt = this.add.text(e.dx, e.dy, e.char, { fontSize: '32px' }).setOrigin(0.5);
+            menuContainer.add(txt);
+            emojiObjs[e.dir] = txt;
+        });
+
+        menuContainer.addAt(menuBg, 0);
+
+        // Interaction state
+        let emojiPointerId = null;
+        let selectedDir = null;
+
+        btnBase.on('pointerdown', (pointer) => {
+            emojiPointerId = pointer.id;
+            menuContainer.setVisible(true);
+            btnBase.setFillStyle(0x666666);
+        });
+
+        this.input.on('pointermove', (pointer) => {
+            if (emojiPointerId !== pointer.id) return;
+
+            const dx = pointer.x - x;
+            const dy = pointer.y - y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Reset highlights
+            Object.values(emojiObjs).forEach(o => o.setScale(1));
+
+            if (dist > 30) {
+                // Determine direction
+                let dir = null;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    dir = dx > 0 ? 'east' : 'west';
+                } else {
+                    dir = dy > 0 ? 'south' : 'north';
+                }
+
+                selectedDir = dir;
+                emojiObjs[dir].setScale(1.5);
+            } else {
+                selectedDir = null;
+            }
+        });
+
+        this.input.on('pointerup', (pointer) => {
+            if (emojiPointerId !== pointer.id) return;
+
+            if (selectedDir && this.isJoined) {
+                const emoji = emojis.find(e => e.dir === selectedDir).char;
+                this.showEmojiPopup(this.playerContainer, emoji);
+                if (this.socketManager) {
+                    this.socketManager.emitEmoji(emoji);
+                }
+            }
+
+            emojiPointerId = null;
+            selectedDir = null;
+            menuContainer.setVisible(false);
+            btnBase.setFillStyle(0x444444);
+            Object.values(emojiObjs).forEach(o => o.setScale(1));
+        });
+
+        // 3. Mobile Inventory Button (Top-Right)
+        const invBtnRadius = 28;
+        const invBtnX = screenWidth - invBtnRadius - 10; // Offset from right
+        const invBtnY = 180; // Below minimap and clock
+
+        const mobInvBtn = this.add.circle(invBtnX, invBtnY, invBtnRadius, 0x444444, 0.8)
+            .setScrollFactor(0)
+            .setDepth(2000)
+            .setInteractive()
+            .setStrokeStyle(2, 0xffffff);
+
+        const mobInvIcon = this.add.text(invBtnX, invBtnY, '🎒', { fontSize: '24px' })
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(2001);
+
+        mobInvBtn.on('pointerdown', () => {
+            this.toggleInventory();
+        });
+    }
+
+    toggleInventory() {
+        const overlay = document.getElementById('inventory-overlay');
+        if (overlay) {
+            const isVisible = overlay.style.display === 'flex';
+            overlay.style.display = isVisible ? 'none' : 'flex';
+        }
+    }
+
+    showEmojiPopup(container, emoji) {
+        // Create emoji text object
+        const emojiText = this.add.text(0, -60, emoji, {
+            fontSize: '32px'
+        }).setOrigin(0.5);
+
+        // Add to container so it follows the player
+        container.add(emojiText);
+
+        // Animate: Float up and fade out
+        this.tweens.add({
+            targets: emojiText,
+            y: -120,
+            alpha: 0,
+            duration: 1500,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                emojiText.destroy();
+            }
+        });
+    }
+
+    createHealthBar(container, width, height, offsetY) {
+        const bg = this.add.rectangle(0, offsetY, width, height, 0x000000, 0.5);
+        const bar = this.add.rectangle(-(width / 2), offsetY, width, height, 0x00ff00, 1).setOrigin(0, 0.5);
+
+        bg.setName('hpBarBg');
+        bar.setName('hpBar');
+
+        container.add([bg, bar]);
+    }
+
+    updateHealthBar(container, hp, maxHp) {
+        const bar = container.getByName('hpBar');
+        const bg = container.getByName('hpBarBg');
+        if (bar && bg) {
+            const ratio = Phaser.Math.Clamp(hp / maxHp, 0, 1);
+            bar.width = bg.width * ratio;
+
+            // Color feedback
+            if (ratio < 0.3) bar.setFillStyle(0xff0000); // Red
+            else if (ratio < 0.6) bar.setFillStyle(0xffff00); // Yellow
+            else bar.setFillStyle(0x00ff00); // Green
+        }
+    }
+
+    createDustEffect(x, y) {
+        const dust = this.add.circle(x, y + 15, Phaser.Math.Between(2, 4), 0xcccccc, 0.6);
+        dust.setDepth(y - 1); // Behind character
+
+        this.tweens.add({
+            targets: dust,
+            y: y + Phaser.Math.Between(5, 10),
+            x: dust.x + Phaser.Math.Between(-20, 20),
+            alpha: 0,
+            scale: 0.1,
+            duration: Phaser.Math.Between(500, 800),
+            ease: 'Cubic.easeOut',
+            onComplete: () => dust.destroy()
+        });
+    }
+
+    createFireSpark(x, y) {
+        const spark = this.add.circle(x + Phaser.Math.Between(-15, 15), y, Phaser.Math.Between(1, 3), 0xffaa00, 0.8);
+        spark.setDepth(y + 1);
+
+        this.tweens.add({
+            targets: spark,
+            y: y - Phaser.Math.Between(40, 80),
+            x: spark.x + Phaser.Math.Between(-20, 20),
+            alpha: 0,
+            duration: Phaser.Math.Between(800, 1200),
+            ease: 'Quad.easeOut',
+            onComplete: () => spark.destroy()
+        });
     }
 
 
@@ -357,7 +625,9 @@ export class MainScene extends Phaser.Scene {
         this.isMinimapExpanded = false;
         minimapBg.on('pointerdown', () => {
             this.isMinimapExpanded = !this.isMinimapExpanded;
-            const targetScale = this.isMinimapExpanded ? 3.0 : 1.0;
+            // Limit to 2.5x on mobile, 3.0x on desktop
+            const maxScale = isMobile ? 2.5 : 3.0;
+            const targetScale = this.isMinimapExpanded ? maxScale : 1.0;
 
             this.tweens.add({
                 targets: this.minimapContainer,
@@ -463,6 +733,13 @@ export class MainScene extends Phaser.Scene {
             .setName('nicknameText');
 
         container.add([shadow, otherPlayer, otherText]);
+
+        // Health Bar for other player (Moved higher)
+        this.createHealthBar(container, 40, 6, -40);
+        if (playerInfo.hp !== undefined && playerInfo.max_hp !== undefined) {
+            this.updateHealthBar(container, playerInfo.hp, playerInfo.max_hp);
+        }
+
         this.otherPlayers[sid] = container;
     }
 
@@ -474,6 +751,29 @@ export class MainScene extends Phaser.Scene {
 
         // Reset velocity
         body.setVelocity(0);
+
+        // --- INPUT BLOCK (Nickname, Guestbook, Inventory) ---
+        // 1. Check if any HTML input or textarea has focus
+        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+            return;
+        }
+
+        // 2. Block movement if Overlays are open (even if not focused)
+        const lobbyOverlay = document.getElementById('lobby-overlay');
+        const invOverlay = document.getElementById('inventory-overlay');
+        const gbOverlay = document.getElementById('guestbook-overlay');
+
+        const isLobbyOpen = lobbyOverlay && (lobbyOverlay.style.display !== 'none' && lobbyOverlay.style.opacity !== '0');
+        const isInventoryOpen = invOverlay && invOverlay.style.display === 'flex';
+        const isGbOpen = gbOverlay && gbOverlay.style.display === 'flex';
+
+        if (isLobbyOpen || isInventoryOpen || isGbOpen) {
+            // Still run depth and minimap updates, but skip movement input
+            this.updateMinimap();
+            this.updateDepth();
+            this.updateEnvironmentColors();
+            return;
+        }
 
         // Combined Input (Keyboard + Joystick)
         let left = this.controls.left.isDown || this.controls.left2.isDown;
@@ -545,6 +845,11 @@ export class MainScene extends Phaser.Scene {
             const t = this.time.now * 0.015; // Animation speed
             this.player.y = Math.abs(Math.sin(t)) * -8; // Bounce up
             this.player.rotation = Math.sin(t) * 0.1; // Tilt
+
+            // Dust Particles
+            if (this.time.now % 10 < 2) {
+                this.createDustEffect(this.playerContainer.x, this.playerContainer.y);
+            }
         } else {
             this.player.y = 0;
             this.player.rotation = 0;
@@ -557,6 +862,11 @@ export class MainScene extends Phaser.Scene {
                 const t = this.time.now * 0.015;
                 sprite.y = Math.abs(Math.sin(t)) * -8;
                 sprite.rotation = Math.sin(t) * 0.1;
+
+                // Dust for other players
+                if (this.time.now % 10 < 2) {
+                    this.createDustEffect(container.x, container.y);
+                }
             } else {
                 sprite.y = 0;
                 sprite.rotation = 0;
@@ -570,6 +880,11 @@ export class MainScene extends Phaser.Scene {
                 const t = this.time.now * 0.02; // Faster bobbing for smaller creatures
                 sprite.y = Math.abs(Math.sin(t)) * -4;
                 sprite.rotation = Math.sin(t) * 0.15;
+
+                // Dust for NPCs
+                if (this.time.now % 12 < 2) {
+                    this.createDustEffect(container.x, container.y);
+                }
             } else {
                 sprite.y = 0;
                 sprite.rotation = 0;
@@ -603,6 +918,11 @@ export class MainScene extends Phaser.Scene {
         this.updateMinimap();
         this.updateDepth();
         this.updateEnvironmentColors();
+
+        // Bonfire Sparks
+        if (this.bonfire && this.time.now % 15 < 2) {
+            this.createFireSpark(this.bonfire.x, this.bonfire.y);
+        }
     }
 
     updateEnvironmentColors() {
@@ -611,11 +931,11 @@ export class MainScene extends Phaser.Scene {
         const time = this.worldTime;
 
         const colors = [
-            { t: 0.0, r: 5, g: 5, b: 20 },      // Midnight (Darker)
+            { t: 0.0, r: 20, g: 20, b: 40 },      // Midnight (Adjusted for better visibility)
             { t: 0.25, r: 170, g: 136, b: 255 },// Dawn
             { t: 0.5, r: 255, g: 255, b: 255 },  // Noon
             { t: 0.75, r: 255, g: 136, b: 68 }, // Dusk
-            { t: 1.0, r: 5, g: 5, b: 20 }       // Midnight (Loop)
+            { t: 1.0, r: 20, g: 20, b: 40 }       // Midnight (Loop)
         ];
 
 
@@ -681,7 +1001,7 @@ export class MainScene extends Phaser.Scene {
 
         npcData.forEach(data => {
             const container = this.add.container(data.x, data.y);
-            const shadow = this.add.ellipse(0, 10, 16, 8, 0x000000, 0.2);
+            const shadow = this.add.ellipse(0, 15, 24, 12, 0x000000, 0.3);
             const textureKey = data.type === 'roach' ? 'npc_roach' : 'npc_sheep';
 
             let sprite;
@@ -697,11 +1017,18 @@ export class MainScene extends Phaser.Scene {
 
             sprite.setOrigin(0.5, 0.5);
 
-            // Larger NPCs (approx 85% of player size)
-            sprite.displayWidth = 42;
+            // Larger NPCs (Now matched to player size: 48px)
+            sprite.displayWidth = 48;
             sprite.scaleY = sprite.scaleX;
 
             container.add([shadow, sprite]);
+
+            // Health Bar for NPC (Moved slightly higher)
+            this.createHealthBar(container, 40, 6, -30);
+            if (data.hp !== undefined && data.max_hp !== undefined) {
+                this.updateHealthBar(container, data.hp, data.max_hp);
+            }
+
             this.npcs[data.id] = container;
             if (this.npcGroup) this.npcGroup.add(container);
 
@@ -832,14 +1159,26 @@ export class MainScene extends Phaser.Scene {
         }
 
         trees.forEach(t => {
+            // Biome logic: determine texture based on Y coordinate
+            let texture = 'tree';
+            let tint = 0xffffff;
+            let displaySize = 96;
+
+            if (t.y < -700) {
+                texture = 'snow_tree';
+            } else if (t.y > 700) {
+                texture = 'cactus';
+                displaySize = 64; // Cacti are usually a bit smaller
+            }
+
             // Create tree as part of the physics group
-            const tree = this.treesGroup.create(t.x, t.y, 'tree');
+            const tree = this.treesGroup.create(t.x, t.y, texture);
             tree.setPipeline('Light2D');
 
 
             // Visuals
             tree.setOrigin(0.5, 0.9);
-            tree.setDisplaySize(96, 96);
+            tree.setDisplaySize(displaySize, displaySize);
             tree.setDepth(t.y); // Y-sort immediately
 
             // Physics Body (Trunk only)

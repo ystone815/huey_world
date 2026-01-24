@@ -52,7 +52,7 @@ MAP_FILE = os.path.join(MAP_DIR, 'forest.json')
 
 MAP_SIZE = 900
 SAFE_RADIUS = 150
-TREE_COUNT = 60
+TREE_COUNT = 120
 world_trees = []
 
 # NPC Data
@@ -73,6 +73,8 @@ def init_npcs():
             'target_x': 0,
             'target_y': 0,
             'speed': 2.0 if npc_type == 'roach' else 1.0,
+            'hp': 100,
+            'max_hp': 100,
             'last_move': 0
         }
         # Set initial target
@@ -219,7 +221,9 @@ async def connect(sid, environ):
         'y': random.randint(-100, 100),
         'color': f'#{random.randint(0, 0xFFFFFF):06x}',
         'nickname': 'Unknown',
-        'skin': 'skin_fox'
+        'skin': 'skin_fox',
+        'hp': 100,
+        'max_hp': 100
     }
 
     print(f"Assigning {sid} -> {players[sid]}")
@@ -316,6 +320,16 @@ async def player_move(sid, data):
         await sio.emit('player_moved', {'sid': sid, 'x': data['x'], 'y': data['y']})
     else:
         print(f"Ignored move from unknown SID: {sid}")
+
+@sio.on('show_emoji')
+async def show_emoji(sid, data):
+    # data expected: { 'emoji': '❤️' }
+    if sid in players:
+        # Broadcast emoji to all OTHER players
+        await sio.emit('show_emoji', {
+            'sid': sid,
+            'emoji': data.get('emoji')
+        }, skip_sid=sid)
 
 
 if __name__ == "__main__":
