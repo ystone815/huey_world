@@ -105,14 +105,19 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - [ ] **BGM/SFX**: Atmospheric forest music and walking sound effects.
 
 ## ✅ Completed in this Session (Latest)
-- **Visual FX**: Added real-time health bars (synced) and movement dust/fire sparks.
-- **World Expansion**: Implemented Snow and Desert biomes with unique textures and objects (Cactus, Snow Tree).
-- **Terrain Density**: Doubled total tree/object count (120) and triggered map regeneration.
-- **Interaction Polish**: Fixed WASD input collision in UI fields and made guestbook proximity-only.
-- **Atmosphere**: Smoothed bonfire animation (slowed duration x5) and lightened nighttime ambient for better visibility.
-- **Character Refinement**: Raised player health bar height to -40px; added bobbing/tilting animations.
-- **Physics**: Implemented tree collisions with optimized "trunk-only" hitboxes.
-- **Minimap**: Added tree and NPC indicators for better world overview.
+- **Sprite Optimization**: 
+  - Fixed cactus sprite: removed thick edges with clean transparent background
+  - Fixed snow_tree sprite: removed background artifacts using magenta-bg generation method
+  - Fixed npc_roach2 sprite: removed white background for clean transparency
+- **Collision System**: 
+  - Added type-specific collision boxes for cactus (16x16) and snow_tree (20x20)
+  - All biome objects now have proper trunk-only collision detection
+- **Rendering Fixes**:
+  - Fixed character clipping at biome boundaries by excluding backgrounds from updateDepth()
+  - Set proper depth hierarchy: backgrounds (-1000/-999), transitions (-999), characters (Y-based)
+  - Added smooth gradient transitions between biomes (snow↔forest, forest↔desert)
+- **Background Removal Tool**: Enhanced `remove_bg.py` with magenta-tinted pixel detection for anti-aliasing artifacts
+- **Cache Management**: Updated all sprite versions for proper browser cache invalidation
 
 
 

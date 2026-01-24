@@ -36,17 +36,35 @@ export class MainScene extends Phaser.Scene {
         console.log("MainScene Created");
 
         // 0. Create Background (Forest Ground)
-        // Main world ground
+        // Main world ground (only middle section, not overlapping biomes)
         this.ground = this.add.tileSprite(-1000, -700, 2000, 1400, 'ground').setOrigin(0);
         this.ground.setPipeline('Light2D');
+        this.ground.setDepth(-1000); // Behind everything
 
         // Snow Biome (Top)
         this.snowGround = this.add.tileSprite(-1000, -1000, 2000, 300, 'snow_ground').setOrigin(0);
         this.snowGround.setPipeline('Light2D');
+        this.snowGround.setDepth(-999); // Slightly above ground to cover it
 
         // Desert Biome (Bottom)
         this.desertGround = this.add.tileSprite(-1000, 700, 2000, 300, 'desert_ground').setOrigin(0);
         this.desertGround.setPipeline('Light2D');
+        this.desertGround.setDepth(-999); // Slightly above ground to cover it
+
+        // Smooth Transition Zones
+        // Snow to Forest transition (Y: -700 to -650)
+        const snowTransition = this.add.graphics();
+        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 0.3, 0.3, 0, 0);
+        snowTransition.fillRect(-1000, -700, 2000, 50);
+        snowTransition.setDepth(-999);
+        snowTransition.setPipeline('Light2D');
+
+        // Forest to Desert transition (Y: 700 to 750)
+        const desertTransition = this.add.graphics();
+        desertTransition.fillGradientStyle(0xd2691e, 0xd2691e, 0xd2691e, 0xd2691e, 0, 0, 0.3, 0.3);
+        desertTransition.fillRect(-1000, 700, 2000, 50);
+        desertTransition.setDepth(-999);
+        desertTransition.setPipeline('Light2D');
 
 
         // 1. Generate Texture proceduraly
@@ -1126,14 +1144,19 @@ export class MainScene extends Phaser.Scene {
     }
 
     updateDepth() {
-        // Y-Aorting: The lower the Y, the higher the depth value (closer to camera)
+        // Y-Sorting: The lower the Y, the higher the depth value (closer to camera)
         // We set depth = y. Simple as that.
 
         this.children.each(child => {
-            // Only sort Sprites and Containers that are actors or trees
-            // We can check if they have a 'y' property and are not UI
-            if (child.input && child.input.enabled) return; // Skip UI like joystick? No, joystick has explicit depth.
-            if (child.scrollFactorX === 0) return; // Skip UI elements
+            // Skip UI elements
+            if (child.input && child.input.enabled) return;
+            if (child.scrollFactorX === 0) return;
+
+            // Skip background layers (they have fixed depths)
+            if (child === this.ground || child === this.snowGround || child === this.desertGround) return;
+
+            // Skip graphics objects (transitions, etc)
+            if (child.type === 'Graphics') return;
 
             // Adjust depth
             child.setDepth(child.y);
