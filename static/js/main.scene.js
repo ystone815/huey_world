@@ -909,15 +909,6 @@ export class MainScene extends Phaser.Scene {
 
         this.updateHarvesting(delta);
 
-        // Don't move if harvesting
-        if (this.isHarvesting) {
-            this.playerContainer.body.setVelocity(0);
-            this.updateMinimap();
-            this.updateDepth();
-            this.updateEnvironmentColors();
-            return;
-        }
-
         this.checkTreeProximity();
         this.handleNPCInteraction();
 
@@ -1611,7 +1602,7 @@ export class MainScene extends Phaser.Scene {
         }
 
         let nearestTree = null;
-        let minDist = 60;
+        let minDist = 50; // Refined start range (was 60)
 
         this.treesGroup.getChildren().forEach(tree => {
             if (!tree.visible) return; // Skip harvested trees on cooldown
@@ -1669,7 +1660,7 @@ export class MainScene extends Phaser.Scene {
             // Only check distance if target still exists
             if (this.harvestTarget) {
                 const dist = Phaser.Math.Distance.Between(this.playerContainer.x, this.playerContainer.y, this.harvestTarget.x, this.harvestTarget.y);
-                if (dist > 80) this.cancelHarvesting();
+                if (dist > 70) this.cancelHarvesting(); // Refined cancel range (was 80)
             }
         }
     }
