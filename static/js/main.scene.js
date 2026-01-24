@@ -56,13 +56,15 @@ export class MainScene extends Phaser.Scene {
         // 1. Snow to Forest (Boundary: -700)
         const snowTransition = this.add.graphics();
         // A. Forest -> Seam (Fade from transparent to solid white over 250px)
-        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 0, 0, 1, 1);
+        // Corrected: Solid at -700 (Top), Transparent at -450 (Bottom)
+        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 1, 1, 0, 0);
         snowTransition.fillRect(-1000, -700, 2000, 250);
         // B. THE SEAM BUFFER (Solid white strip to hide the tile edge)
         snowTransition.fillStyle(0xffffff, 1);
         snowTransition.fillRect(-1000, -710, 2000, 20);
         // C. Seam -> Snow (Fade from solid white to transparent over 250px)
-        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 1, 1, 0, 0);
+        // Corrected: Transparent at -960 (Top), Solid at -710 (Bottom)
+        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 0, 0, 1, 1);
         snowTransition.fillRect(-1000, -960, 2000, 250);
         snowTransition.setDepth(-999);
         snowTransition.setPipeline('Light2D');

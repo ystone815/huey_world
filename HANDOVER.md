@@ -187,7 +187,7 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 - **Rendering Fixes**:
   - Fixed character clipping at biome boundaries by excluding backgrounds from updateDepth()
   - Set proper depth hierarchy: backgrounds (-1001 to -999), transitions (-999), characters (Y-based)
-  - Completely eliminated sharp biome edges by making Forest the global base layer and using wider (300px) centered gradients across Snow and Desert boundaries.
+  - Successfully eliminated all sharp biome edges using the "Seam Sandwich" technique (solid buffer strip + dual gradients), ensuring 100% gapless blending for snow and desert boundaries.
 - **Atmosphere & Polish**:
   - Brightened midnight ambient lighting for better visibility
   - Cleared 350px "safe zone" radius around bonfire by removing nearby trees
