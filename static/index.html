@@ -1299,11 +1299,11 @@
                 obs.y += baseSpeed;
                 obs.el.style.top = obs.y + 'px';
 
-                // Collision detection (Ultra-tight for precision)
+                // Collision detection (Balanced for 'feel')
                 const playerY = actualHeight - 60;
-                if (obs.y > playerY - 5 && obs.y < playerY + 25) {
+                if (obs.y > playerY - 10 && obs.y < playerY + 30) {
                     const diff = Math.abs(obs.x - playerX);
-                    if (diff < 1.8) {
+                    if (diff < 2.5) {
                         if (currentGameId === 'cactus_dodge') {
                             gameOver();
                         } else if (obs.type === 'good') {
