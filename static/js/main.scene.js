@@ -173,8 +173,8 @@ export class MainScene extends Phaser.Scene {
         this.bonfireLight = this.add.circle(80, 50, 60, 0xffaa00, 0.2);
         this.bonfireLight.setDisplaySize(80, 80);
 
-        // Phaser 2D Point Light for Bonfire (Doubled range: 400)
-        this.bonfirePointLight = this.lights.addLight(80, 50, 400).setColor(0xffaa00).setIntensity(1.8);
+        // Phaser 2D Point Light for Bonfire (Expanded range: 600)
+        this.bonfirePointLight = this.lights.addLight(80, 50, 600).setColor(0xffaa00).setIntensity(1.2);
 
         this.tweens.add({
             targets: this.bonfireLight,
@@ -189,8 +189,8 @@ export class MainScene extends Phaser.Scene {
         // Animate Point Light Flicker
         this.tweens.add({
             targets: this.bonfirePointLight,
-            intensity: { from: 1.5, to: 2.2 },
-            radius: { from: 380, to: 420 },
+            intensity: { from: 1.0, to: 1.5 },
+            radius: { from: 570, to: 630 },
             duration: 100,
             yoyo: true,
             repeat: -1
