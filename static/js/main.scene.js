@@ -35,37 +35,39 @@ export class MainScene extends Phaser.Scene {
     create() {
         console.log("MainScene Created");
 
-        // 0. Create Background (Forest Ground)
-        // Main world ground (only middle section, not overlapping biomes)
-        this.ground = this.add.tileSprite(-1000, -700, 2000, 1400, 'ground').setOrigin(0);
+        // 0. World Background Layers
+        // Forest Ground (Base Layer - Covers everything)
+        this.ground = this.add.tileSprite(-1000, -1000, 2000, 2000, 'ground').setOrigin(0);
         this.ground.setPipeline('Light2D');
-        this.ground.setDepth(-1000); // Behind everything
+        this.ground.setDepth(-1001);
 
-        // Snow Biome (Top)
+        // Snow Biome (Top Layer - Ends at -700)
         this.snowGround = this.add.tileSprite(-1000, -1000, 2000, 300, 'snow_ground').setOrigin(0);
         this.snowGround.setPipeline('Light2D');
-        this.snowGround.setDepth(-999); // Slightly above ground to cover it
+        this.snowGround.setDepth(-1000);
 
-        // Desert Biome (Bottom)
+        // Desert Biome (Bottom Layer - Starts at 700)
         this.desertGround = this.add.tileSprite(-1000, 700, 2000, 300, 'desert_ground').setOrigin(0);
         this.desertGround.setPipeline('Light2D');
-        this.desertGround.setDepth(-999); // Slightly above ground to cover it
+        this.desertGround.setDepth(-1000);
 
-        // Smooth Transition Zones
-        // Snow to Forest transition (Y: -700 to -550)
+        // Smooth Transition Gradients (Centered on -700 and 700)
+
+        // Snow to Forest (-700 Boundary)
         const snowTransition = this.add.graphics();
-        // Fade from solid white at the snow edge to transparent
-        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0xffffff, 0xffffff, 1, 1, 0, 0);
-        snowTransition.fillRect(-1000, -700, 2000, 150);
+        // Fade snow color (solid white-ish) to transparent over the forest
+        // Covers Y: -850 to -550 (300px centered on -700)
+        snowTransition.fillGradientStyle(0xffffff, 0xffffff, 0x4a4a4a, 0x4a4a4a, 1, 1, 0, 0);
+        snowTransition.fillRect(-1000, -850, 2000, 300);
         snowTransition.setDepth(-999);
         snowTransition.setPipeline('Light2D');
 
-        // Forest to Desert transition (Y: 550 to 700)
+        // Forest to Desert (+700 Boundary)
         const desertTransition = this.add.graphics();
-        // Fade from transparent to solid desert color at the desert edge
-        // Desert ground color is roughly #d2691e
-        desertTransition.fillGradientStyle(0xd2691e, 0xd2691e, 0xd2691e, 0xd2691e, 0, 0, 1, 1);
-        desertTransition.fillRect(-1000, 550, 2000, 150);
+        // Fade from forest ground color (transparent overlay) to solid desert color (#d2691e)
+        // Covers Y: 550 to 850 (300px centered on 700)
+        desertTransition.fillGradientStyle(0x4a4a4a, 0x4a4a4a, 0xd2691e, 0xd2691e, 0, 0, 1, 1);
+        desertTransition.fillRect(-1000, 550, 2000, 300);
         desertTransition.setDepth(-999);
         desertTransition.setPipeline('Light2D');
 
