@@ -41,6 +41,17 @@ CREATE TABLE IF NOT EXISTS inventory (
 )
 ''')
 
+# Create leaderboard table
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS leaderboard (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    score INTEGER NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+)
+''')
+
 # Create index for faster lookups
 cursor.execute('CREATE INDEX IF NOT EXISTS idx_username ON users(username)')
 cursor.execute('CREATE INDEX IF NOT EXISTS idx_token ON sessions(token)')

@@ -75,8 +75,22 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
     - **Health Bars**: Color-coded HP bars (Green/Yellow/Red) synced for all players and NPCs. Positioned higher for players (-40px) to avoid name overlap.
 15. **Refined Interactions**:
     - **Input Collision Fix**: Phaser key capture disabled when typing in HTML inputs (Nickname, Guestbook).
-    - **Guestbook**: Click-to-open removed; now strictly proximity-based (2s cooldown) to prevent accidental clicks. 
-
+    - **Guestbook**: Strictly proximity-based (2s timer) to prevent accidental clicks. 
+16. **Tree Harvesting System (Automatic)**:
+    - **Mechanic**: Simply stand near a tree/cactus for 2 seconds to gather resources. No keys required.
+    - **Loot Table**: 
+        - Forest: Wood (🪵), Forest Apple (🍎)
+        - Snow: Frozen Wood (🧊), Snow Crystal (💎)
+        - Desert: Cactus Fiber (🧵), Desert Fruit (🌵)
+    - **Visuals**: Trees disappear and collision is disabled during the 1-minute respawn period.
+    - **Harvest Bar**: Golden-orange progress bar positioned 60px above character with top-most rendering priority.
+17. **Smart Inventory**:
+    - **Item Stacking**: Same item types merge into a single slot with a quantity counter.
+    - **Auto-Merge**: Existing duplicates are automatically merged upon login for organization.
+    - **Asset Fallback**: Uses high-quality emojis if PNG assets are missing (prevents empty slots/404s).
+18. **Minigame & Leaderboard (In Progress)**:
+    - **Location**: Arcade machine area planned at `(300, 50)` near the Guestbook.
+    - **Storage**: `leaderboard` table added to `users.db` for global high score tracking.
 
 
 
@@ -168,43 +182,27 @@ A real-time multiplayer 2D top-down game built with **Phaser 3** (Frontend) and 
 - [x] **Collision System**: Tree/object collision with trunk-only hitboxes
 
 ## ✅ Completed in this Session (Latest)
-- **User Authentication**: 
-  - Implemented secure ID/Password system with bcrypt hashing
-  - Added "Remember Me" auto-login using persistent session tokens
-  - Created modern login/signup UI in `static/login.html`
-  - Integrated authenticated data (nickname/skin) into the game join flow
-  - Added logout functionality
-- **Personalized Inventory**:
-  - Implemented 40-slot persistent inventory system (SQLite based)
-  - Created mobile-friendly paged UI (20 slots x 2 pages) with "Next/Prev" navigation
-  - Added secure backend endpoints for inventory fetch and synchronization
-  - Integrated real-time UI updates on item collection
-- **UX & UI Polish**:
-  - Repositioned player/NPC nicknames to appear below the character (previously above) to resolve overlap with health bars.
-  - Standardized inventory slot size (4x5 per page) for mobile consistency.
-- **Git State**:
-  - Pushed all persistent inventory, harvesting, and UI changes to remote repository.
-- **Sprite Optimization**: 
-  - Fixed cactus sprite: removed thick edges with clean transparent background
-  - Fixed snow_tree sprite: removed background artifacts using magenta-bg generation method
-  - Fixed npc_roach2 sprite: removed white background for clean transparency
-- **Collision System**: 
-  - Added type-specific collision boxes for cactus (16x16) and snow_tree (20x20)
-  - All biome objects now have proper trunk-only collision detection
-- **Rendering Fixes**:
-  - Fixed character clipping at biome boundaries by excluding backgrounds from updateDepth()
-  - Set proper depth hierarchy: backgrounds (-1001 to -999), transitions (-999), characters (Y-based)
-  - Successfully eliminated all sharp biome edges using the "Seam Sandwich" technique (solid buffer strip + dual gradients), ensuring 100% gapless blending for snow and desert boundaries.
-- **Atmosphere & Polish**:
-  - Brightened midnight ambient lighting for better visibility
-  - Cleared 350px "safe zone" radius around bonfire by removing nearby trees
-  - Adjusted bonfire light intensity and expanded 1.5x radius for softer coverage
-- **Project Structure**: Organized all utility scripts into the `scripts/` directory
-- **Cache Management**: Updated all sprite versions for proper browser cache invalidation
-
-
-
-
+- **Tree Harvesting & Resources**:
+  - Built fully automatic proximity gathering system (2s timer).
+  - Implemented biome-specific loot and visual respawn cycles.
+  - Fixed high-priority rendering (depth) to ensure UI visibility over trees.
+- **Smart Inventory & Stacking**:
+  - Refactored `addItem` to support item stacking (consumes less slots).
+  - Added retroactive merge logic to clean up users' existing inventories.
+  - Implemented emoji-based asset fallback for 100% UI reliability.
+- **UI & UX Polish**:
+  - Repositioned nicknames to character bottom to solve health bar overlap.
+  - Standardized paged inventory UI (20 slots x 2 pages).
+  - Refined harvesting bar: removed redundant text, fixed colors, and adjusted Z-depth.
+- **User Authentication Expansion**: 
+  - Implemented secure ID/Password system with bcrypt hashing.
+  - Added "Remember Me" auto-login using persistent session tokens.
+  - Created modern login/signup UI and integrated join flow.
+- **Developer Operations**:
+  - Successfully pushed all stable features to Github.
+  - Updated project documentation and folder structure (`scripts/` organization).
+- **Infrastructure for Minigame**:
+  - Updated database schema for global leaderboards.
 
 
 ---

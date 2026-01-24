@@ -199,6 +199,32 @@ export class MainScene extends Phaser.Scene {
         this.physics.add.collider(this.playerContainer, this.board);
         this.physics.add.collider(this.playerContainer, this.bonfire);
 
+        // 2.2.6 Arcade Machine (Minigame Area)
+        // Position: (300, 50) - Near Guestbook
+        this.arcade = this.add.container(300, 50);
+        const arcadeBody = this.add.rectangle(0, 0, 45, 65, 0x222233).setStrokeStyle(2, 0x444466);
+        const arcadeScreen = this.add.rectangle(0, -10, 35, 25, 0x000000).setStrokeStyle(1, 0x00ffff);
+        const screenGlow = this.add.text(0, -11, "🎮", { fontSize: '16px' }).setOrigin(0.5);
+        const arcadePanel = this.add.rectangle(0, 15, 45, 15, 0x333344).setStrokeStyle(1, 0x444466);
+        const arcadeButtons = this.add.circle(10, 15, 3, 0xff00ff);
+        const arcadeJoystick = this.add.circle(-10, 15, 3, 0x00ffff);
+        const arcadeLabel = this.add.text(0, 35, "MINIGAME", { font: 'bold 10px Arial', fill: '#00ffff' }).setOrigin(0.5);
+
+        this.arcade.add([arcadeBody, arcadeScreen, screenGlow, arcadePanel, arcadeButtons, arcadeJoystick, arcadeLabel]);
+        this.arcade.setSize(45, 65);
+        this.physics.add.existing(this.arcade, true);
+        this.physics.add.collider(this.playerContainer, this.arcade);
+
+        // Arcade Glow
+        this.arcadePointLight = this.lights.addLight(300, 50, 150).setColor(0x00ffff).setIntensity(1.0);
+        this.tweens.add({
+            targets: this.arcadePointLight,
+            intensity: { from: 0.8, to: 1.2 },
+            duration: 1500,
+            yoyo: true,
+            repeat: -1
+        });
+
 
         // Add simple light/flicker effect
         // 1. Scale Tween (Breathing) - Slowed down
@@ -947,6 +973,38 @@ export class MainScene extends Phaser.Scene {
                 // Reset "already opened" flag when moving far away
                 if (dist > 120) {
                     this.isProximityOpen = false;
+                }
+            }
+        }
+
+        // --- ARCADE PROXIMITY INTERACTION ---
+        if (this.arcade && this.isJoined) {
+            const dist = Phaser.Math.Distance.Between(this.playerContainer.x, this.playerContainer.y, this.arcade.x, this.arcade.y);
+
+            if (dist < 70) {
+                if (!this.isArcadeOpen && !document.getElementById('minigame-overlay').style.display.includes('flex')) {
+                    this.arcadeTimer = (this.arcadeTimer || 0) + this.game.loop.delta;
+                    this.proximityLabel.setVisible(true);
+                    this.proximityLabel.setPosition(this.arcade.x, this.arcade.y - 70);
+
+                    const timeLeft = Math.max(0, (2000 - this.arcadeTimer) / 1000).toFixed(1);
+                    this.proximityLabel.setText(`Playing... ${timeLeft}s`);
+
+                    if (this.arcadeTimer >= 2000) {
+                        if (window.openArcade) window.openArcade();
+                        this.isArcadeOpen = true;
+                        this.proximityLabel.setVisible(false);
+                        this.arcadeTimer = 0;
+                    }
+                }
+            } else {
+                this.arcadeTimer = 0;
+                // If label was showing for arcade and we moved away, hide it
+                if (this.isArcadeOpen || this.proximityLabel.text.includes('Playing')) {
+                    this.proximityLabel.setVisible(false);
+                }
+                if (dist > 120) {
+                    this.isArcadeOpen = false;
                 }
             }
         }

@@ -494,6 +494,153 @@
                 gap: 5px;
             }
         }
+
+        /* Minigame Overlay */
+        #minigame-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            pointer-events: auto;
+        }
+
+        .arcade-cabinet {
+            background: #1a1a2e;
+            border: 6px solid #e94560;
+            border-radius: 20px;
+            padding: 30px;
+            width: 85%;
+            max-width: 500px;
+            box-shadow: 0 0 50px #e9456088;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            text-align: center;
+        }
+
+        #minigame-screen {
+            background: #16213e;
+            border: 4px solid #0f3460;
+            height: 350px;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cactus-obstacle {
+            position: absolute;
+            font-size: 30px;
+            top: -50px;
+        }
+
+        #arcade-player {
+            position: absolute;
+            bottom: 20px;
+            font-size: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: left 0.1s linear;
+        }
+
+        .arcade-controls {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+        }
+
+        .arcade-btn {
+            padding: 15px 30px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        /* Leaderboard Overlay */
+        #leaderboard-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3100;
+            pointer-events: auto;
+        }
+
+        .leaderboard-content {
+            background: #2b1d1d;
+            border: 4px solid #f9a825;
+            border-radius: 15px;
+            padding: 25px;
+            width: 80%;
+            max-width: 400px;
+            box-shadow: 0 0 30px rgba(249, 168, 37, 0.4);
+        }
+
+        .lb-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid rgba(249, 168, 37, 0.2);
+            color: #fff9c4;
+        }
+
+        .lb-rank {
+            color: #f9a825;
+            font-weight: bold;
+            width: 30px;
+        }
+
+        .lb-nick {
+            flex-grow: 1;
+            text-align: left;
+            padding-left: 10px;
+        }
+
+        .lb-score {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .close-arcade,
+        .close-lb {
+            cursor: pointer;
+            float: right;
+            font-size: 32px;
+            margin-top: -15px;
+            color: #fff;
+        }
+
+        /* Responsive Mobile Fixes */
+        @media (max-height: 500px) {
+            .inventory-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+
+            .inventory-content {
+                scale: 0.8;
+            }
+
+            .arcade-cabinet {
+                scale: 0.7;
+            }
+        }
     </style>
     <!-- Socket.IO -->
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
@@ -557,6 +704,41 @@
 </head>
 
 <body>
+    <!-- Arcade / Minigame Overlay -->
+    <div id="minigame-overlay">
+        <div class="arcade-cabinet">
+            <span class="close-arcade" onclick="closeArcade()">&times;</span>
+            <h2 style="color: #e94560; margin: 0; font-family: 'Courier New', Courier, monospace;">🌵 CACTUS DODGE 🌵
+            </h2>
+            <div id="minigame-screen">
+                <div id="arcade-start-hint" style="color: #fff; text-shadow: 0 0 10px #e94560;">Press START to Play
+                </div>
+                <div id="arcade-player" style="display: none;">🦊</div>
+                <div id="arcade-score"
+                    style="position: absolute; top: 10px; right: 15px; color: #fff; font-size: 18px; display: none;">
+                    0.0s</div>
+            </div>
+            <div class="arcade-controls">
+                <button class="arcade-btn" id="arcade-start-btn" onclick="startMinigame()">Start</button>
+                <button class="arcade-btn" onclick="openLeaderboard()" style="background: #0f3460;">Ranking</button>
+            </div>
+            <p style="color: #4e4e6a; font-size: 10px; margin: 0;">Use LEFT/RIGHT ARROWS or A/D to move</p>
+        </div>
+    </div>
+
+    <!-- Leaderboard Overlay -->
+    <div id="leaderboard-overlay">
+        <div class="leaderboard-content">
+            <span class="close-lb" onclick="closeLeaderboard()">&times;</span>
+            <h2 style="color: #f9a825; text-align: center; margin-bottom: 20px;">🏆 Hall of Fame</h2>
+            <div id="leaderboard-list">
+                <!-- Rows added dynamically -->
+            </div>
+            <button class="arcade-btn" onclick="closeLeaderboard()"
+                style="width: 100%; margin-top: 15px; background: #5d4037;">Back</button>
+        </div>
+    </div>
+
     <div id="game-container"></div>
 
     <div id="lobby-overlay">
@@ -885,8 +1067,170 @@
             if (e.key === 'Escape') {
                 document.getElementById('guestbook-overlay').style.display = 'none';
                 invOverlay.style.display = 'none';
+                closeArcade();
             }
         });
+
+        // --- MINIGAME LOGIC ---
+        let minigameActive = false;
+        let minigameScore = 0;
+        let minigameLoop = null;
+        let playerX = 50; // Percentage
+        let obstacles = [];
+
+        function openArcade() {
+            document.getElementById('minigame-overlay').style.display = 'flex';
+        }
+
+        window.openArcade = openArcade; // Expose to Phaser
+
+        function closeArcade() {
+            stopMinigame();
+            document.getElementById('minigame-overlay').style.display = 'none';
+            document.getElementById('leaderboard-overlay').style.display = 'none';
+        }
+
+        window.closeArcade = closeArcade;
+
+        function startMinigame() {
+            if (minigameActive) return;
+            minigameActive = true;
+            minigameScore = 0;
+            playerX = 50;
+            obstacles = [];
+
+            document.getElementById('arcade-start-hint').style.display = 'none';
+            const playerEl = document.getElementById('arcade-player');
+            playerEl.style.display = 'block';
+            playerEl.style.left = '50%';
+
+            const scoreEl = document.getElementById('arcade-score');
+            scoreEl.style.display = 'block';
+            scoreEl.innerText = '0.0s';
+
+            document.getElementById('arcade-start-btn').innerText = 'Restart';
+
+            // Clear screen of old obstacles
+            const screen = document.getElementById('minigame-screen');
+            screen.querySelectorAll('.cactus-obstacle').forEach(c => c.remove());
+
+            minigameLoop = setInterval(updateMinigame, 50);
+
+            // Global key listeners for arcade
+            window.addEventListener('keydown', handleArcadeKeys);
+        }
+
+        window.startMinigame = startMinigame;
+
+        function handleArcadeKeys(e) {
+            if (!minigameActive) return;
+            if (e.key === 'ArrowLeft' || e.key === 'a') playerX = Math.max(5, playerX - 8);
+            if (e.key === 'ArrowRight' || e.key === 'd') playerX = Math.min(95, playerX + 8);
+            document.getElementById('arcade-player').style.left = playerX + '%';
+        }
+
+        function updateMinigame() {
+            minigameScore += 0.05;
+            document.getElementById('arcade-score').innerText = minigameScore.toFixed(1) + 's';
+
+            // Spawn obstacles
+            if (Math.random() < 0.1) {
+                spawnObstacle();
+            }
+
+            // Move obstacles
+            const screenHeight = 350;
+            obstacles.forEach((obs, index) => {
+                obs.y += 7 + (minigameScore * 0.2); // Speed increases over time
+                obs.el.style.top = obs.y + 'px';
+
+                // Collision detection
+                if (obs.y > 280 && obs.y < 330) {
+                    const diff = Math.abs(obs.x - playerX);
+                    if (diff < 8) {
+                        gameOver();
+                    }
+                }
+
+                // Cleanup
+                if (obs.y > screenHeight) {
+                    obs.el.remove();
+                    obstacles.splice(index, 1);
+                }
+            });
+        }
+
+        function spawnObstacle() {
+            const screen = document.getElementById('minigame-screen');
+            const obsEl = document.createElement('div');
+            obsEl.className = 'cactus-obstacle';
+            obsEl.innerText = '🌵';
+            const x = Math.random() * 90 + 5;
+            obsEl.style.left = x + '%';
+            obsEl.style.top = '-50px';
+            screen.appendChild(obsEl);
+            obstacles.push({ el: obsEl, x: x, y: -50 });
+        }
+
+        function gameOver() {
+            stopMinigame();
+
+            // Submit score
+            const token = localStorage.getItem('hueyworld_token');
+            if (token) {
+                fetch('/api/minigame/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: token, score: Math.floor(minigameScore * 10) })
+                });
+            }
+
+            document.getElementById('arcade-start-hint').style.display = 'block';
+            document.getElementById('arcade-start-hint').innerText = "Game Over! Final: " + minigameScore.toFixed(1) + "s. Try Again?";
+        }
+
+        function stopMinigame() {
+            minigameActive = false;
+            clearInterval(minigameLoop);
+            window.removeEventListener('keydown', handleArcadeKeys);
+        }
+
+        async function openLeaderboard() {
+            const listEl = document.getElementById('leaderboard-list');
+            listEl.innerHTML = '<div style="color: #ccc; text-align: center;">Loading scores...</div>';
+            document.getElementById('leaderboard-overlay').style.display = 'flex';
+
+            try {
+                const response = await fetch('/api/minigame/leaderboard');
+                const data = await response.json();
+
+                listEl.innerHTML = '';
+                if (data.leaderboard && data.leaderboard.length > 0) {
+                    data.leaderboard.forEach((entry, i) => {
+                        const row = document.createElement('div');
+                        row.className = 'lb-row';
+                        row.innerHTML = `
+                            <span class="lb-rank">#${i + 1}</span>
+                            <span class="lb-nick">${entry.nickname}</span>
+                            <span class="lb-score">${(entry.score / 10).toFixed(1)}s</span>
+                        `;
+                        listEl.appendChild(row);
+                    });
+                } else {
+                    listEl.innerHTML = '<div style="color: #ccc; text-align: center;">No scores yet!</div>';
+                }
+            } catch (e) {
+                listEl.innerHTML = '<div style="color: #ff5252; text-align: center;">Error loading ranks</div>';
+            }
+        }
+
+        window.openLeaderboard = openLeaderboard;
+
+        function closeLeaderboard() {
+            document.getElementById('leaderboard-overlay').style.display = 'none';
+        }
+
+        window.closeLeaderboard = closeLeaderboard;
     </script>
 </body>
 

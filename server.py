@@ -317,6 +317,71 @@ async def update_inventory(request: InventoryUpdateRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+# Minigame & Leaderboard Endpoints
+class ScoreSubmitRequest(BaseModel):
+    token: str
+    score: int
+
+@app.post("/api/minigame/submit")
+async def submit_score(request: ScoreSubmitRequest):
+    """Securely submit a minigame score"""
+    try:
+        conn = get_user_db()
+        cursor = conn.cursor()
+        
+        # Verify token
+        cursor.execute(
+            "SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?",
+            (request.token, datetime.now(timezone.utc).isoformat())
+        )
+        session = cursor.fetchone()
+        if not session:
+            conn.close()
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        
+        user_id = session[0]
+        
+        # Insert score
+        cursor.execute(
+            "INSERT INTO leaderboard (user_id, score) VALUES (?, ?)",
+            (user_id, request.score)
+        )
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "Score submitted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Score submit error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/api/minigame/leaderboard")
+async def get_leaderboard():
+    """Fetch global top 10 scores with nicknames"""
+    try:
+        conn = get_user_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT u.nickname, MAX(l.score) as high_score 
+            FROM leaderboard l
+            JOIN users u ON l.user_id = u.id
+            GROUP BY l.user_id
+            ORDER BY high_score DESC
+            LIMIT 10
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+        
+        leaderboard = [
+            {"nickname": r[0], "score": r[1]} for r in rows
+        ]
+        return {"success": True, "leaderboard": leaderboard}
+    except Exception as e:
+        print(f"Get leaderboard error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 @app.post("/api/logout")
 async def logout(request: TokenRequest):
     """Invalidate session token"""
