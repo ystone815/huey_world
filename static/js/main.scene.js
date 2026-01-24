@@ -1851,8 +1851,9 @@ export class MainScene extends Phaser.Scene {
             if (data.success) {
                 this.showFloatingNote("Constructed!");
                 this.cancelBuild();
-                // Note: The object will be rendered via socket broadcast 'object_placed'
-                // This ensures consistency across all clients.
+
+                // CRITICAL: Refresh local inventory from server to reflect deduction
+                this.fetchInventoryFromServer();
 
                 // Refresh inventory UI if visible
                 if (window.updateInventoryUI) window.updateInventoryUI();
