@@ -955,11 +955,11 @@ export class MainScene extends Phaser.Scene {
         const time = this.worldTime;
 
         const colors = [
-            { t: 0.0, r: 20, g: 20, b: 40 },      // Midnight (Adjusted for better visibility)
+            { t: 0.0, r: 40, g: 40, b: 60 },      // Midnight (Brightened for better visibility)
             { t: 0.25, r: 170, g: 136, b: 255 },// Dawn
             { t: 0.5, r: 255, g: 255, b: 255 },  // Noon
             { t: 0.75, r: 255, g: 136, b: 68 }, // Dusk
-            { t: 1.0, r: 20, g: 20, b: 40 }       // Midnight (Loop)
+            { t: 1.0, r: 40, g: 40, b: 60 }       // Midnight (Loop)
         ];
 
 
