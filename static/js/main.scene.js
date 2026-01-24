@@ -153,8 +153,8 @@ export class MainScene extends Phaser.Scene {
 
         // Add physics to Bonfire
         this.physics.add.existing(this.bonfire, true);
-        this.bonfire.body.setSize(20, 20);
-        this.bonfire.body.setOffset(14, 25);
+        this.bonfire.body.setSize(38, 38);
+        this.bonfire.body.setOffset(5, 5);
 
         // Add collider with player
         this.physics.add.collider(this.playerContainer, this.board);
