@@ -593,6 +593,30 @@
             box-shadow: 0 0 30px rgba(249, 168, 37, 0.4);
         }
 
+        .lb-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .lb-tab {
+            flex: 1;
+            padding: 8px;
+            background: rgba(249, 168, 37, 0.2);
+            border: 2px solid #f9a825;
+            color: #f9a825;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .lb-tab.active {
+            background: #f9a825;
+            color: #2b1d1d;
+        }
+
         .lb-row {
             display: flex;
             justify-content: space-between;
@@ -792,7 +816,15 @@
     <div id="leaderboard-overlay">
         <div class="leaderboard-content">
             <span class="close-lb" onclick="closeLeaderboard()">&times;</span>
-            <h2 style="color: #f9a825; text-align: center; margin-bottom: 20px;">🏆 Hall of Fame</h2>
+            <h2 style="color: #f9a825; text-align: center; margin-bottom: 15px;">🏆 Hall of Fame</h2>
+
+            <!-- Game Selection Tabs -->
+            <div class="lb-tabs">
+                <div class="lb-tab active" id="tab-lb-cactus_dodge" onclick="switchLBTab('cactus_dodge')">🌵 Cactus
+                </div>
+                <div class="lb-tab" id="tab-lb-resource_rush" onclick="switchLBTab('resource_rush')">🍎 Resource</div>
+            </div>
+
             <div id="leaderboard-list">
                 <!-- Rows added dynamically -->
             </div>
@@ -1373,14 +1405,36 @@
             activeKeys = {};
         }
 
+        let lbGameId = 'cactus_dodge';
+
+        function switchLBTab(gameId) {
+            lbGameId = gameId;
+            // Update UI
+            document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+            const activeTab = document.getElementById(`tab-lb-${gameId}`);
+            if (activeTab) activeTab.classList.add('active');
+
+            // Refresh list
+            fetchLeaderboardData(gameId);
+        }
+
+        window.switchLBTab = switchLBTab;
+
         async function openLeaderboard() {
+            document.getElementById('leaderboard-overlay').style.display = 'flex';
+            // Default to current game or cactus_dodge if in lobby
+            lbGameId = (currentGameId === 'resource_rush' || currentGameId === 'cactus_dodge') ? currentGameId : 'cactus_dodge';
+            switchLBTab(lbGameId);
+        }
+
+        window.openLeaderboard = openLeaderboard;
+
+        async function fetchLeaderboardData(gameId) {
             const listEl = document.getElementById('leaderboard-list');
             listEl.innerHTML = '<div style="color: #ccc; text-align: center;">Loading...</div>';
-            document.getElementById('leaderboard-overlay').style.display = 'flex';
 
             try {
-                // Fetch for current game in lobby or preview
-                const response = await fetch(`/api/minigame/leaderboard?game_id=${currentGameId}`);
+                const response = await fetch(`/api/minigame/leaderboard?game_id=${gameId}`);
                 const data = await response.json();
 
                 listEl.innerHTML = '';
@@ -1388,7 +1442,7 @@
                     data.leaderboard.forEach((entry, i) => {
                         const row = document.createElement('div');
                         row.className = 'lb-row';
-                        const scoreStr = (currentGameId === 'cactus_dodge') ? (entry.score / 10).toFixed(1) + 's' : entry.score + ' items';
+                        const scoreStr = (gameId === 'cactus_dodge') ? (entry.score / 10).toFixed(1) + 's' : entry.score + ' items';
                         row.innerHTML = `
                             <span class="lb-rank">#${i + 1}</span>
                             <span class="lb-nick">${entry.nickname}</span>
@@ -1397,14 +1451,12 @@
                         listEl.appendChild(row);
                     });
                 } else {
-                    listEl.innerHTML = '<div style="color: #ccc; text-align: center;">No scores yet!</div>';
+                    listEl.innerHTML = '<div style="color: #ccc; text-align: center; padding: 20px;">No scores yet!</div>';
                 }
             } catch (e) {
                 listEl.innerHTML = '<div style="color: #ff5252; text-align: center;">Error loading ranks</div>';
             }
         }
-
-        window.openLeaderboard = openLeaderboard;
 
         function closeLeaderboard() {
             document.getElementById('leaderboard-overlay').style.display = 'none';
