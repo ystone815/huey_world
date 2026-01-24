@@ -134,6 +134,29 @@
             z-index: 2500;
         }
 
+        /* Harvesting UI */
+        #harvest-bar-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -100px);
+            width: 100px;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #fff;
+            border-radius: 6px;
+            display: none;
+            z-index: 500;
+        }
+
+        #harvest-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffa726, #fb8c00);
+            border-radius: 4px;
+            transition: width 0.1s linear;
+        }
+
         .inventory-content,
         .build-content {
             background: #3e2723;
@@ -239,14 +262,55 @@
             left: 50%;
             transform: translate(-50%, -50%);
         }
+
+        /* Minimap */
+        #minimap {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            overflow: hidden;
+            z-index: 500;
+            display: none;
+        }
+
+        #minimap-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .minimap-dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #00ff00;
+            transform: translate(-50%, -50%);
+        }
     </style>
 </head>
 
 <body>
+    <div id="minimap">
+        <div id="minimap-content">
+            <div id="me-dot" class="minimap-dot" style="top:50%; left:50%; background:#0f0;"></div>
+        </div>
+    </div>
+    <!-- Harvest HUD -->
+    <div id="harvest-bar-container">
+        <div id="harvest-bar-fill"></div>
+    </div>
+
     <div id="game-ui" style="display:none;">
         <div class="info-panel">
             <h3 style="margin:0; color:#ffcc00;">🦊 Huey3D</h3>
             <div id="player-nick" style="font-weight:bold;">...</div>
+            <div id="online-count" style="font-size:12px; color:#4db6ac;">Online: 1</div>
             <div id="controls-hint" style="font-size:12px; color:#ccc; margin-top:5px;">
                 WASD: Move | LeftClick: Build | RightClick: Remove | ESC: Build Menu
             </div>
@@ -369,19 +433,199 @@
         dirLight.castShadow = true;
         scene.add(dirLight);
 
-        // Infinite Grid
-        const grid = new THREE.GridHelper(100, 100, 0x000000, 0x888888);
+        // Infinite Grid (Keep for dev)
+        const grid = new THREE.GridHelper(2000, 40, 0x000000, 0x444444);
+        grid.position.y = -0.01;
         scene.add(grid);
 
-        // Interaction Objects Group
+        // --- 1.1 Biome Floors ---
+        function createBiomeFloors() {
+            const size = 2000;
+            // Center (Forest)
+            const forestGeo = new THREE.PlaneGeometry(size, 1400);
+            const forestMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32 }); // Deep Green
+            const forest = new THREE.Mesh(forestGeo, forestMat);
+            forest.rotation.x = -Math.PI / 2;
+            forest.receiveShadow = true;
+            scene.add(forest);
+
+            // North (Snow)
+            const snowGeo = new THREE.PlaneGeometry(size, 650);
+            const snowMat = new THREE.MeshLambertMaterial({ color: 0xeceff1 }); // Snowy White
+            const snow = new THREE.Mesh(snowGeo, snowMat);
+            snow.rotation.x = -Math.PI / 2;
+            snow.position.z = -1000 + 325; // Top area
+            snow.receiveShadow = true;
+            scene.add(snow);
+
+            // South (Desert)
+            const desertGeo = new THREE.PlaneGeometry(size, 650);
+            const desertMat = new THREE.MeshLambertMaterial({ color: 0xffecb3 }); // Sandy Yellow
+            const desert = new THREE.Mesh(desertGeo, desertMat);
+            desert.rotation.x = -Math.PI / 2;
+            desert.position.z = 1000 - 325; // Bottom area
+            desert.receiveShadow = true;
+            scene.add(desert);
+        }
+        createBiomeFloors();
+
         const worldObjects = [];
-        const floorGeo = new THREE.PlaneGeometry(100, 100);
-        const floorMat = new THREE.ShadowMaterial({ opacity: 0.2 });
+        // Invisible plane for raycasting (Full size)
+        const floorGeo = new THREE.PlaneGeometry(2000, 2000);
+        const floorMat = new THREE.MeshBasicMaterial({ visible: false });
         const floor = new THREE.Mesh(floorGeo, floorMat);
         floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
         scene.add(floor);
         worldObjects.push(floor);
+
+        // --- 1.3 Harvesting Logic ---
+        let isHarvesting = false;
+        let harvestProgress = 0;
+        let harvestTarget = null;
+        const HARVEST_TIME = 2000; // 2 seconds
+
+        function updateHarvesting(dt) {
+            if (!isJoined) return;
+
+            // 1. Find Nearest Tree
+            let nearest = null;
+            let minDist = 3; // 3 units in 3D
+
+            worldObjects.forEach(obj => {
+                if (obj.userData && obj.userData.parentGroup) {
+                    const dist = controls.target.distanceTo(obj.userData.parentGroup.position);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = obj.userData.parentGroup;
+                    }
+                }
+            });
+
+            if (nearest && !isHarvesting) {
+                // Potential target found
+                startHarvesting(nearest);
+            } else if (!nearest && isHarvesting) {
+                cancelHarvesting();
+            } else if (nearest && isHarvesting && nearest !== harvestTarget) {
+                // Switched tree
+                cancelHarvesting();
+                startHarvesting(nearest);
+            }
+
+            // 2. Advance Progress
+            if (isHarvesting) {
+                harvestProgress += dt;
+                const percent = Math.min(100, (harvestProgress / HARVEST_TIME) * 100);
+                document.getElementById('harvest-bar-fill').style.width = percent + '%';
+
+                // Visual Feedback: Shake tree
+                if (harvestTarget) {
+                    harvestTarget.rotation.z = Math.sin(Date.now() * 0.02) * 0.05;
+                }
+
+                if (harvestProgress >= HARVEST_TIME) {
+                    completeHarvesting();
+                }
+            }
+        }
+
+        function startHarvesting(target) {
+            isHarvesting = true;
+            harvestProgress = 0;
+            harvestTarget = target;
+            document.getElementById('harvest-bar-container').style.display = 'block';
+        }
+
+        function cancelHarvesting() {
+            if (harvestTarget) harvestTarget.rotation.z = 0;
+            isHarvesting = false;
+            harvestProgress = 0;
+            harvestTarget = null;
+            document.getElementById('harvest-bar-container').style.display = 'none';
+        }
+
+        async function completeHarvesting() {
+            // Logic to update inventory (mirroring 2D effect)
+            // Note: server update needed for real persistence if not handled by standard movement
+            console.log("Harvest Complete!");
+            // Temporary: Add dummy item locally to test UI
+            inventory.push({ item_id: 'wood', quantity: 1, slot_index: inventory.length });
+            renderInventoryUI();
+
+            // Cleanup
+            const target = harvestTarget;
+            cancelHarvesting();
+
+            // Respawn fade out (Voxel style)
+            if (target) {
+                target.visible = false;
+                setTimeout(() => { target.visible = true; }, 10000);
+            }
+        }
+
+        // --- 1.4 Day/Night Logic ---
+        let worldTime = 0.5; // Shared state
+        function updateAtmosphere(time) {
+            worldTime = time;
+
+            // Sky & Fog Colors (Mirroring server logic)
+            // 0.0 (Midnight), 0.25 (Dawn), 0.5 (Noon), 0.75 (Dusk)
+            let skyColor, ambientIntensity;
+
+            if (worldTime < 0.2) { // Midnight
+                skyColor = new THREE.Color(0x0a192f);
+                ambientIntensity = 0.2;
+            } else if (worldTime < 0.4) { // Dawn
+                skyColor = new THREE.Color(0x5c6bc0);
+                ambientIntensity = 0.4;
+            } else if (worldTime < 0.7) { // Day
+                skyColor = new THREE.Color(0x87ceeb);
+                ambientIntensity = 0.7;
+            } else { // Dusk
+                skyColor = new THREE.Color(0xff8a65);
+                ambientIntensity = 0.4;
+            }
+
+            scene.background = skyColor;
+            if (scene.fog) scene.fog.color = skyColor;
+            ambientLight.intensity = ambientIntensity;
+
+            // Directional light (Sun) movement
+            const angle = worldTime * Math.PI * 2;
+            dirLight.position.set(Math.cos(angle) * 20, Math.sin(angle) * 20, 10);
+            dirLight.intensity = Math.max(0, Math.sin(angle)) * 0.8 + 0.2;
+        }
+
+        // --- 1.2 Voxel Models ---
+        function createVoxelTree(x, z, type = 'forest') {
+            const group = new THREE.Group();
+
+            // Trunk
+            const trunkGeo = new THREE.BoxGeometry(0.8, 2, 0.8);
+            const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5d4037 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 1;
+            trunk.castShadow = true;
+            group.add(trunk);
+
+            // Leaves
+            const leafGeo = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+            let leafColor = 0x2e7d32;
+            if (type === 'snow') leafColor = 0xbbdefb;
+            if (type === 'desert') leafColor = 0xcddc39;
+
+            const leaves = new THREE.Mesh(leafGeo, new THREE.MeshLambertMaterial({ color: leafColor }));
+            leaves.position.y = 3;
+            leaves.castShadow = true;
+            group.add(leaves);
+
+            group.position.set(x, 0, z);
+            scene.add(group);
+
+            // Add trunk to worldObjects for raycasting/building on
+            trunk.userData = { parentGroup: group }; // for identification
+            worldObjects.push(trunk);
+        }
 
         // --- 2. System Integration (Auth & Sync) ---
         const token = localStorage.getItem('hueyworld_token');
@@ -396,6 +640,7 @@
         async function initGame(nickname) {
             document.getElementById('lobby-overlay').style.display = 'none';
             document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('minimap').style.display = 'block';
             document.getElementById('build-btn-hud').style.display = 'flex';
             document.getElementById('player-nick').innerText = nickname;
 
@@ -407,11 +652,32 @@
             });
 
             socket.on('current_players', (players) => {
-                // Render others
+                for (let sid in players) {
+                    if (sid !== socket.id) updateOtherPlayer(sid, players[sid]);
+                }
+            });
+
+            socket.on('player_moved', (data) => {
+                if (data.sid !== socket.id) updateOtherPlayer(data.sid, data);
+            });
+
+            socket.on('new_player', (data) => {
+                if (data.sid !== socket.id) updateOtherPlayer(data.sid, data.player);
+            });
+
+            socket.on('player_disconnected', (sid) => {
+                if (otherPlayers[sid]) {
+                    scene.remove(otherPlayers[sid].group);
+                    delete otherPlayers[sid];
+                }
             });
 
             socket.on('object_placed', (data) => {
                 renderVoxel(data.x, data.y, data.z, data.type);
+            });
+
+            socket.on('npcs_moved', (data) => {
+                updateNPCs(data);
             });
 
             isJoined = true;
@@ -419,10 +685,83 @@
             loadWorld();
         }
 
+        // --- 2.1 NPC Logic ---
+        let otherNPCs = {};
+        function updateNPCs(data) {
+            for (let nid in data) {
+                const npcData = data[nid];
+                if (!otherNPCs[nid]) {
+                    const group = new THREE.Group();
+                    const loader = new THREE.TextureLoader();
+                    // npcData doesn't always have type in movement packet, 
+                    // ideally server sends type once on join or in packet.
+                    // For now fallback to roach
+                    const tex = loader.load(`/static/assets/roach.png`);
+                    tex.magFilter = THREE.NearestFilter;
+                    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex }));
+                    sprite.scale.set(1.2, 1.2, 1);
+                    sprite.position.y = 0.6;
+                    group.add(sprite);
+
+                    scene.add(group);
+                    otherNPCs[nid] = { group, sprite };
+                }
+                const n = otherNPCs[nid];
+                n.group.position.set(npcData.x / 20, 0, npcData.y / 20);
+                // Simple bobbing
+                n.sprite.position.y = 0.6 + Math.abs(Math.sin(Date.now() * 0.01 + nid)) * 0.1;
+            }
+        }
+        function updateOtherPlayer(sid, data) {
+            if (!otherPlayers[sid]) {
+                const group = new THREE.Group();
+
+                // Billboard Sprite
+                const loader = new THREE.TextureLoader();
+                const tex = loader.load(`/static/assets/${data.skin || 'skin_fox'}.png`);
+                tex.magFilter = THREE.NearestFilter;
+                const mat = new THREE.SpriteMaterial({ map: tex });
+                const sprite = new THREE.Sprite(mat);
+                sprite.scale.set(1.5, 1.5, 1);
+                sprite.position.y = 0.75;
+                group.add(sprite);
+
+                // Nickname label
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 64;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 32px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(data.nickname || '...', 128, 40);
+                const nameTex = new THREE.CanvasTexture(canvas);
+                const nameMat = new THREE.SpriteMaterial({ map: nameTex });
+                const nameSprite = new THREE.Sprite(nameMat);
+                nameSprite.scale.set(2, 0.5, 1);
+                nameSprite.position.y = 1.6;
+                group.add(nameSprite);
+
+                scene.add(group);
+                otherPlayers[sid] = { group, sprite, data };
+            }
+
+            const p = otherPlayers[sid];
+            p.group.position.set(data.x, data.z, data.y); // Note mapping
+
+            // Animation (Bobbing)
+            if (data.isMoving) {
+                p.sprite.position.y = 0.75 + Math.abs(Math.sin(Date.now() * 0.01)) * 0.2;
+            } else {
+                p.sprite.position.y = 0.75;
+            }
+        }
+
         async function fetchInventory() {
             if (!token) return;
             const res = await fetch('/api/inventory/get', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token })
             });
             const data = await res.json();
@@ -476,22 +815,49 @@
         });
 
         async function loadWorld() {
+            // 1. Load Trees (Static Map)
+            try {
+                const res = await fetch('/static/db/map/forest.json');
+                const trees = await res.json();
+                trees.forEach(t => {
+                    // Map: 2D (x, y) scaling. 
+                    // Let's scale down the world slightly for better 3D spacing (1:10)
+                    const x = t.x / 20;
+                    const z = t.y / 20;
+                    let type = 'forest';
+                    if (t.y < -700) type = 'snow';
+                    if (t.y > 700) type = 'desert';
+                    createVoxelTree(x, z, type);
+                });
+            } catch (e) {
+                console.error("Tree load error:", e);
+            }
+
+            // 2. Load Placed Objects
             const res = await fetch('/api/world/objects');
             const data = await res.json();
             if (data.success) {
-                data.objects.forEach(obj => renderVoxel(obj.x, obj.z, obj.y, obj.type));
+                data.objects.forEach(obj => renderVoxel(obj.x / 20, obj.y / 20, obj.z, obj.type));
             }
         }
 
         function renderVoxel(x, z, y, type) {
             const geo = new THREE.BoxGeometry(1, 1, 1);
-            const mat = new THREE.MeshLambertMaterial({ color: (type === 'bonfire' ? 0xff4400 : 0x4db6ac) });
+            const isFire = type === 'bonfire';
+            const mat = new THREE.MeshLambertMaterial({ color: (isFire ? 0xff5722 : 0x4db6ac) });
             const voxel = new THREE.Mesh(geo, mat);
             voxel.position.set(x, y + 0.5, z);
             voxel.castShadow = true;
             voxel.receiveShadow = true;
             scene.add(voxel);
             worldObjects.push(voxel);
+
+            if (isFire) {
+                const light = new THREE.PointLight(0xffab40, 3, 10);
+                light.position.set(x, y + 1.2, z);
+                scene.add(light);
+                // Flicker effect can be added in animate loop
+            }
         }
 
         // --- 3. Interaction & Build Mode ---
@@ -554,12 +920,26 @@
                 const gz = Math.floor(pos.z);
 
                 if (buildMode === 'remove') {
-                    // Removal logic...
+                    if (intersect.object !== floor) {
+                        const res = await fetch('/api/world/remove', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                token,
+                                x: intersect.object.position.x * 20,
+                                y: intersect.object.position.z * 20
+                            })
+                        });
+                        if (res.ok) {
+                            scene.remove(intersect.object);
+                            worldObjects.splice(worldObjects.indexOf(intersect.object), 1);
+                            fetchInventory();
+                        }
+                    }
                 } else {
                     // Place logic via API
                     const res = await fetch('/api/world/place', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ token, type: buildMode, x: gx, y: gz, z: gy })
+                        body: JSON.stringify({ token, type: buildMode, x: gx * 20, y: gz * 20, z: gy })
                     });
                     if (res.ok) fetchInventory();
                 }
@@ -603,17 +983,33 @@
         }
 
         // --- 5. Game Loop ---
-        const moveSpeed = 0.1;
+        const moveSpeed = 0.15;
+        let lastTime = performance.now();
+
         function animate() {
             requestAnimationFrame(animate);
+            const now = performance.now();
+            const dt = now - lastTime;
+            lastTime = now;
 
-            // Movement logic
-            if (joystickActive) {
-                // Move camera/player based on joystick
+            const isMoving = joystickActive;
+            if (isMoving) {
                 camera.position.x += joystickVector.x * moveSpeed;
                 camera.position.z += joystickVector.y * moveSpeed;
                 controls.target.x += joystickVector.x * moveSpeed;
                 controls.target.z += joystickVector.y * moveSpeed;
+            }
+
+            updateHarvesting(dt);
+
+            // Sync My Position
+            if (isJoined && socket && (isMoving || Date.now() % 100 < 20)) {
+                socket.emit('player_move', {
+                    x: controls.target.x,
+                    y: controls.target.z,
+                    z: controls.target.y,
+                    isMoving: isMoving
+                });
             }
 
             controls.update();
