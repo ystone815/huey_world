@@ -628,7 +628,8 @@
         }
 
         /* Responsive Mobile Fixes */
-        @media (max-height: 500px) {
+        @media (max-width: 600px),
+        (max-height: 500px) {
             .inventory-grid {
                 grid-template-columns: repeat(5, 1fr);
             }
@@ -638,8 +639,41 @@
             }
 
             .arcade-cabinet {
-                scale: 0.7;
+                scale: 0.9;
+                padding: 15px;
+                width: 95%;
             }
+
+            #minigame-screen {
+                height: 250px;
+            }
+
+            .arcade-mobile-controls {
+                display: flex !important;
+            }
+        }
+
+        .arcade-mobile-controls {
+            display: none;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .mobile-ctrl-btn {
+            flex: 1;
+            padding: 20px;
+            background: rgba(233, 69, 96, 0.3);
+            border: 2px solid #e94560;
+            color: white;
+            border-radius: 10px;
+            font-size: 24px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .mobile-ctrl-btn:active {
+            background: #e94560;
         }
     </style>
     <!-- Socket.IO -->
@@ -723,6 +757,14 @@
                 <button class="arcade-btn" onclick="openLeaderboard()" style="background: #0f3460;">Ranking</button>
             </div>
             <p style="color: #4e4e6a; font-size: 10px; margin: 0;">Use LEFT/RIGHT ARROWS or A/D to move</p>
+
+            <!-- Mobile Controls -->
+            <div class="arcade-mobile-controls">
+                <button class="mobile-ctrl-btn" ontouchstart="movePlayerMobile('left')"
+                    ontouchend="stopPlayerMobile()">◀</button>
+                <button class="mobile-ctrl-btn" ontouchstart="movePlayerMobile('right')"
+                    ontouchend="stopPlayerMobile()">▶</button>
+            </div>
         </div>
     </div>
 
@@ -1077,6 +1119,24 @@
         let minigameLoop = null;
         let playerX = 50; // Percentage
         let obstacles = [];
+        let mobileMoveInterval = null;
+
+        function movePlayerMobile(dir) {
+            if (!minigameActive) return;
+            stopPlayerMobile();
+            mobileMoveInterval = setInterval(() => {
+                if (dir === 'left') playerX = Math.max(5, playerX - 5);
+                if (dir === 'right') playerX = Math.min(95, playerX + 5);
+                document.getElementById('arcade-player').style.left = playerX + '%';
+            }, 50);
+        }
+
+        function stopPlayerMobile() {
+            clearInterval(mobileMoveInterval);
+        }
+
+        window.movePlayerMobile = movePlayerMobile;
+        window.stopPlayerMobile = stopPlayerMobile;
 
         function openArcade() {
             document.getElementById('minigame-overlay').style.display = 'flex';
@@ -1085,6 +1145,7 @@
         window.openArcade = openArcade; // Expose to Phaser
 
         function closeArcade() {
+            stopPlayerMobile();
             stopMinigame();
             document.getElementById('minigame-overlay').style.display = 'none';
             document.getElementById('leaderboard-overlay').style.display = 'none';
@@ -1191,6 +1252,7 @@
 
         function stopMinigame() {
             minigameActive = false;
+            stopPlayerMobile();
             clearInterval(minigameLoop);
             window.removeEventListener('keydown', handleArcadeKeys);
         }
