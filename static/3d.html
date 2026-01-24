@@ -404,19 +404,22 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
         let socket;
-        let myPlayer;
+        let myAvatar;
+        let mySprite;
         let otherPlayers = {};
         let inventory = [];
         let isJoined = false;
         let buildMode = null; // null or 'voxel_box' etc.
 
-        // --- 1. Three.js Engine Setup ---
+        // --- 1. Scene Setup ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb);
-        scene.fog = new THREE.Fog(0x87ceeb, 20, 100);
+        scene.background = new THREE.Color(0x87ceeb); // Sky blue
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(10, 10, 10);
+        // Fog for depth (Increased for better view)
+        scene.fog = new THREE.Fog(0x87ceeb, 20, 300);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(15, 15, 15);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -644,6 +647,9 @@
             document.getElementById('build-btn-hud').style.display = 'flex';
             document.getElementById('player-nick').innerText = nickname;
 
+            // --- LOCAL AVATAR SETUP ---
+            initLocalAvatar(nickname, loginData.skin || 'skin_fox');
+
             // Socket.IO Init
             socket = io('http://' + window.location.hostname + ':8001');
 
@@ -683,6 +689,35 @@
             isJoined = true;
             fetchInventory();
             loadWorld();
+        }
+
+        function initLocalAvatar(nickname, skin) {
+            myAvatar = new THREE.Group();
+
+            // Billboard Sprite
+            const loader = new THREE.TextureLoader();
+            const tex = loader.load(`/static/assets/${skin}.png`);
+            tex.magFilter = THREE.NearestFilter;
+            const mat = new THREE.SpriteMaterial({ map: tex });
+            mySprite = new THREE.Sprite(mat);
+            mySprite.scale.set(1.5, 1.5, 1);
+            mySprite.position.y = 0.75;
+            myAvatar.add(mySprite);
+
+            // Nickname label
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 256; canvas.height = 64;
+            ctx.fillStyle = 'white'; ctx.font = 'bold 32px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(nickname, 128, 40);
+            const nameTex = new THREE.CanvasTexture(canvas);
+            const nameMat = new THREE.SpriteMaterial({ map: nameTex });
+            const nameSprite = new THREE.Sprite(nameMat);
+            nameSprite.scale.set(2, 0.5, 1);
+            nameSprite.position.y = 1.6;
+            myAvatar.add(nameSprite);
+
+            scene.add(myAvatar);
         }
 
         // --- 2.1 NPC Logic ---
@@ -1001,6 +1036,26 @@
             }
 
             updateHarvesting(dt);
+
+            // Update Local Avatar Position
+            if (myAvatar) {
+                myAvatar.position.copy(controls.target);
+                if (isMoving) {
+                    mySprite.position.y = 0.75 + Math.abs(Math.sin(Date.now() * 0.01)) * 0.2;
+                } else {
+                    mySprite.position.y = 0.75;
+                }
+
+                // Update Minimap Dot (Current Player)
+                const meDot = document.getElementById('me-dot');
+                if (meDot) {
+                    // Map 3D (-50 to 50) -> Minimap (0% to 100%)
+                    const mx = (controls.target.x / 50) * 50 + 50;
+                    const my = (controls.target.z / 50) * 50 + 50;
+                    meDot.style.left = mx + '%';
+                    meDot.style.top = my + '%';
+                }
+            }
 
             // Sync My Position
             if (isJoined && socket && (isMoving || Date.now() % 100 < 20)) {
