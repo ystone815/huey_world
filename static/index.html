@@ -1245,7 +1245,7 @@
             screen.querySelectorAll('.cactus-obstacle, .resource-item').forEach(c => c.remove());
 
             activeKeys = {};
-            minigameLoop = setInterval(updateMinigame, 50);
+            minigameLoop = setInterval(updateMinigame, 16); // 60 FPS
             window.addEventListener('keydown', handleKeyDown);
             window.addEventListener('keyup', handleKeyUp);
         }
@@ -1261,28 +1261,28 @@
         }
 
         function updateMinigame() {
-            // Smooth keyboard movement
-            if (activeKeys['ArrowLeft'] || activeKeys['a']) playerX = Math.max(5, playerX - 3);
-            if (activeKeys['ArrowRight'] || activeKeys['d']) playerX = Math.min(95, playerX + 3);
+            // Smooth keyboard movement (Refined for 60FPS)
+            if (activeKeys['ArrowLeft'] || activeKeys['a']) playerX = Math.max(5, playerX - 1.2);
+            if (activeKeys['ArrowRight'] || activeKeys['d']) playerX = Math.min(95, playerX + 1.2);
             document.getElementById('arcade-player').style.left = playerX + '%';
 
             if (currentGameId === 'cactus_dodge') {
-                minigameScore += 0.05;
+                minigameScore += 0.016;
                 document.getElementById('arcade-score').innerText = minigameScore.toFixed(1) + 's';
-                if (Math.random() < 0.1) spawnObstacle();
+                if (Math.random() < 0.035) spawnObstacle();
             } else { // Resource Rush
-                gameTimeLeft -= 0.05;
+                gameTimeLeft -= 0.016;
                 document.getElementById('arcade-timer').innerText = Math.ceil(gameTimeLeft) + 's';
                 if (gameTimeLeft <= 0) { gameOver(); return; }
-                if (Math.random() < 0.15) spawnResource();
+                if (Math.random() < 0.05) spawnResource();
             }
 
             // Move entities
-            const screenHeight = (currentGameId === 'resource_rush') ? 250 : 350; // Dynamic mobile fix check
             const actualHeight = document.getElementById('minigame-screen').offsetHeight;
 
             obstacles.forEach((obs, index) => {
-                obs.y += obs.speed || (7 + (minigameScore * 0.1));
+                const baseSpeed = obs.speed || (2.5 + (minigameScore * 0.04));
+                obs.y += baseSpeed;
                 obs.el.style.top = obs.y + 'px';
 
                 // Collision detection
@@ -1317,10 +1317,10 @@
             if (!minigameActive) return;
             stopPlayerMobile();
             mobileMoveInterval = setInterval(() => {
-                if (dir === 'left') playerX = Math.max(5, playerX - 5);
-                if (dir === 'right') playerX = Math.min(95, playerX + 5);
+                if (dir === 'left') playerX = Math.max(5, playerX - 1.5);
+                if (dir === 'right') playerX = Math.min(95, playerX + 1.5);
                 document.getElementById('arcade-player').style.left = playerX + '%';
-            }, 50);
+            }, 16);
         }
 
         function stopPlayerMobile() {
