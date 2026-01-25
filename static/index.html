@@ -764,6 +764,138 @@
             }
         }
 
+        /* HUD Bottom Bar */
+        #hud-bottom-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 100;
+        }
+
+        .hud-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hud-btn:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #ffcc00;
+        }
+
+        .hud-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Status Overlay */
+        #status-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2600;
+        }
+
+        .status-content {
+            background: #222;
+            border: 2px solid #555;
+            border-radius: 15px;
+            padding: 25px;
+            width: 300px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            color: #eee;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid #444;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+
+        .status-avatar {
+            width: 64px;
+            height: 64px;
+            background: #333;
+            border-radius: 50%;
+            margin-right: 15px;
+            border: 2px solid #ffcc00;
+            image-rendering: pixelated;
+        }
+
+        .status-info h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #ffcc00;
+        }
+
+        .status-info p {
+            margin: 2px 0 0;
+            color: #aaa;
+            font-size: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .stat-label {
+            color: #aaa;
+        }
+
+        .stat-val {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .progress-bar-bg {
+            background: #444;
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: #00e676;
+            /* Green */
+            width: 0%;
+        }
+
+        .exp-fill {
+            background: #2979ff;
+        }
+
+        /* Blue for EXP */
+
         /* Math Blitz Specific UI */
         #math-quiz-ui {
             display: none;
@@ -1123,6 +1255,63 @@
         </div>
     </div>
 
+    <!-- HUD Bottom Bar -->
+    <div id="hud-bottom-bar" style="display: none;"> <!-- Hidden until joined -->
+        <div class="hud-btn" onclick="toggleStatus()" title="My Status">📊</div>
+        <div class="hud-btn" onclick="toggleInventory()" title="Inventory">🎒</div>
+        <div class="hud-btn" onclick="toggleBuildMenu()" title="Build">🔨</div>
+        <div class="hud-btn"
+            onclick="if(window.phaserGame){ window.phaserGame.scene.getScene('MainScene').socketManager.emitEmoji('❤️'); }"
+            title="Wave">👋</div>
+    </div>
+
+    <!-- Status Window Overlay -->
+    <div id="status-overlay" onclick="if(event.target === this) toggleStatus()">
+        <div class="status-content">
+            <div class="status-header">
+                <img src="static/assets/skin_fox.png" class="status-avatar" id="status-avatar-img">
+                <div class="status-info">
+                    <h2 id="status-nickname">Player</h2>
+                    <p id="status-job">Beginner Adventurer</p>
+                </div>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">Level</span>
+                <span class="stat-val" id="status-level">Lv.1</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Experience</span>
+                <span class="stat-val" id="status-exp">0 / 100</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill exp-fill" id="status-exp-bar"></div>
+            </div>
+            <br>
+
+            <div class="stat-row">
+                <span class="stat-label">Health (HP)</span>
+                <span class="stat-val" id="status-hp">100 / 100</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="status-hp-bar"></div>
+            </div>
+            <br>
+
+            <div class="stat-row">
+                <span class="stat-label">Attack Power</span>
+                <span class="stat-val" id="status-atk">10</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Defense</span>
+                <span class="stat-val" id="status-def">0</span>
+            </div>
+
+            <button class="arcade-btn" onclick="toggleStatus()"
+                style="width:100%; margin-top:20px; font-size:16px;">Close</button>
+        </div>
+    </div>
+
     <!-- Game Scripts -->
     <script type="module" src="static/js/game.js"></script>
     <script>
@@ -1202,7 +1391,8 @@
             lobby.style.opacity = '0';
             setTimeout(() => {
                 lobby.style.display = 'none';
-                document.getElementById('build-btn-hud').style.display = 'flex'; // Show Build Button
+                document.getElementById('build-btn-hud').style.display = 'none'; // Hide old button
+                document.getElementById('hud-bottom-bar').style.display = 'flex'; // Show new HUD Dock
             }, 500);
         });
 
@@ -1344,6 +1534,48 @@
         }
 
         window.startPlacement = startPlacement;
+
+        // Status Window Logic
+        function toggleStatus() {
+            const overlay = document.getElementById('status-overlay');
+            const isVisible = overlay.style.display === 'flex';
+            overlay.style.display = isVisible ? 'none' : 'flex';
+
+            if (!isVisible) {
+                updateStatusUI();
+            }
+        }
+        window.toggleStatus = toggleStatus;
+
+        function updateStatusUI() {
+            if (!window.phaserGame) return;
+            const scene = window.phaserGame.scene.getScene('MainScene');
+            if (!scene || !scene.playerContainer) return;
+
+            const p = scene.playerContainer;
+
+            // Basic Info
+            document.getElementById('status-nickname').innerText = scene.nickname;
+            document.getElementById('status-avatar-img').src = `static/assets/${scene.selectedSkin}.png?v=2`;
+            document.getElementById('status-job').innerText = "Novice Adventurer"; // Placeholder class
+
+            // Stats
+            document.getElementById('status-level').innerText = `Lv.${p.level || 1}`;
+            document.getElementById('status-hp').innerText = `${p.hp || 100} / ${p.max_hp || 100}`;
+            document.getElementById('status-atk').innerText = p.attack || 10;
+            document.getElementById('status-def').innerText = p.defense || 0;
+
+            // Bars
+            const hpPct = Math.max(0, Math.min(100, (p.hp / p.max_hp) * 100));
+            document.getElementById('status-hp-bar').style.width = hpPct + "%";
+
+            // EXP (Placeholder logic for now)
+            const exp = p.exp || 0;
+            const nextLevelExp = (p.level || 1) * 100;
+            const expPct = Math.min(100, (exp / nextLevelExp) * 100);
+            document.getElementById('status-exp').innerText = `${exp} / ${nextLevelExp}`;
+            document.getElementById('status-exp-bar').style.width = expPct + "%";
+        }
 
         // Inventory UI Bridge
         const invOverlay = document.getElementById('inventory-overlay');
