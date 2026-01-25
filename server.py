@@ -154,9 +154,9 @@ async def login(request: LoginRequest):
         conn = get_user_db()
         cursor = conn.cursor()
         
-        # Get user by username
+        # Get user by username with stats
         cursor.execute(
-            "SELECT id, username, password_hash, nickname, skin FROM users WHERE username = ?",
+            "SELECT id, username, password_hash, nickname, skin, hp, max_hp, level, exp FROM users WHERE username = ?",
             (request.username,)
         )
         user = cursor.fetchone()
@@ -165,7 +165,7 @@ async def login(request: LoginRequest):
             conn.close()
             raise HTTPException(status_code=401, detail="Invalid username or password")
         
-        user_id, username, _, nickname, skin = user
+        user_id, username, _, nickname, skin, hp, max_hp, level, exp = user
         
         # Update last login
         cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", 
@@ -191,7 +191,11 @@ async def login(request: LoginRequest):
                 "id": user_id,
                 "username": username,
                 "nickname": nickname,
-                "skin": skin or "skin_fox"
+                "skin": skin or "skin_fox",
+                "hp": hp or 100,
+                "max_hp": max_hp or 100,
+                "level": level or 1,
+                "exp": exp or 0
             },
             "token": token
         }
@@ -209,9 +213,10 @@ async def verify_token(request: TokenRequest):
         conn = get_user_db()
         cursor = conn.cursor()
         
-        # Get session and check expiry
+        # Get session and check expiry with stats
         cursor.execute(
-            """SELECT s.user_id, s.expires_at, u.username, u.nickname, u.skin 
+            """SELECT s.user_id, s.expires_at, u.username, u.nickname, u.skin, 
+                      u.hp, u.max_hp, u.level, u.exp 
                FROM sessions s 
                JOIN users u ON s.user_id = u.id 
                WHERE s.token = ?""",
@@ -223,7 +228,7 @@ async def verify_token(request: TokenRequest):
             conn.close()
             raise HTTPException(status_code=401, detail="Invalid token")
         
-        user_id, expires_at, username, nickname, skin = session
+        user_id, expires_at, username, nickname, skin, hp, max_hp, level, exp = session
         
         # Check if token expired
         if datetime.fromisoformat(expires_at) < datetime.now():
@@ -245,7 +250,11 @@ async def verify_token(request: TokenRequest):
                 "id": user_id,
                 "username": username,
                 "nickname": nickname,
-                "skin": skin or "skin_fox"
+                "skin": skin or "skin_fox",
+                "hp": hp or 100,
+                "max_hp": max_hp or 100,
+                "level": level or 1,
+                "exp": exp or 0
             }
         }
     
@@ -534,9 +543,10 @@ async def remove_object(request: RemoveObjectRequest):
         # 2. Find Object and Check Ownership
         world_conn = get_world_db()
         world_cursor = world_conn.cursor()
-        # Find object at target coordinates (allow small epsilon? grid is 48, so exact match is fine)
+        # Find object at target coordinates (allow small epsilon for float precision)
+        # Using ABS diff < 1.0 ensures we hit the grid point even if stored as 48.00001
         world_cursor.execute(
-            "SELECT type, owner_username FROM placed_objects WHERE x = ? AND y = ?",
+            "SELECT type, owner_username FROM placed_objects WHERE ABS(x - ?) < 1.0 AND ABS(y - ?) < 1.0",
             (request.x, request.y)
         )
         obj_row = world_cursor.fetchone()
@@ -548,8 +558,7 @@ async def remove_object(request: RemoveObjectRequest):
             
         obj_type, owner = obj_row
         
-        # Ownership check: for now, only allow owner to remove. 
-        # (Alternatively, allow admin or just let anyone break it? Let's stick with owner for now)
+        # Ownership check
         if owner != username:
              user_conn.close()
              world_conn.close()
@@ -585,8 +594,8 @@ async def remove_object(request: RemoveObjectRequest):
                         (user_id, item_id, qty, target_slot)
                     )
         
-        # 4. Delete from World DB
-        world_cursor.execute("DELETE FROM placed_objects WHERE x = ? AND y = ?", (request.x, request.y))
+        # 4. Delete from World DB (using same fuzzy check)
+        world_cursor.execute("DELETE FROM placed_objects WHERE ABS(x - ?) < 1.0 AND ABS(y - ?) < 1.0", (request.x, request.y))
         
         user_conn.commit()
         world_conn.commit()
@@ -710,7 +719,34 @@ async def update_world_time_loop():
         await sio.emit('time_update', {'world_time': world_time})
         await asyncio.sleep(5)
 
+def init_rpg_columns():
+    """Migrate DB to include RPG stats columns"""
+    print("Migrating User DB for RPG Stats...")
+    conn = get_user_db()
+    c = conn.cursor()
+    columns = [
+        ("hp", "INTEGER DEFAULT 100"),
+        ("max_hp", "INTEGER DEFAULT 100"),
+        ("attack", "INTEGER DEFAULT 10"),
+        ("defense", "INTEGER DEFAULT 0"),
+        ("exp", "INTEGER DEFAULT 0"),
+        ("level", "INTEGER DEFAULT 1")
+    ]
+    
+    for col, dtype in columns:
+        try:
+            c.execute(f"ALTER TABLE users ADD COLUMN {col} {dtype}")
+            print(f"Added column: {col}")
+        except Exception:
+            # Column likely exists
+            pass
+            
+    conn.commit()
+    conn.close()
+    print("RPG Stats Migration Complete.")
+
 init_db()
+init_rpg_columns()
 
 
 def load_or_generate_map():
@@ -842,17 +878,24 @@ async def set_nickname(sid, data):
                 conn = get_user_db()
                 cursor = conn.cursor()
                 cursor.execute(
-                    """SELECT s.user_id, u.nickname FROM sessions s 
+                    """SELECT s.user_id, u.nickname, u.hp, u.max_hp, u.level, u.exp 
+                       FROM sessions s 
                        JOIN users u ON s.user_id = u.id 
                        WHERE s.token = ? AND s.expires_at > ?""",
                     (token, datetime.now().isoformat())
                 )
                 result = cursor.fetchone()
                 if result:
-                    user_id, db_nickname = result
+                    user_id, db_nickname, db_hp, db_max_hp, db_lvl, db_exp = result
                     # Force the authenticated nickname if user is logged in
                     name = db_nickname
-                    print(f"Server: Authenticated join for {name} (User ID: {user_id})")
+                    # Load stats
+                    players[sid]['hp'] = db_hp
+                    players[sid]['max_hp'] = db_max_hp
+                    players[sid]['level'] = db_lvl
+                    players[sid]['exp'] = db_exp
+                    
+                    print(f"Server: Authenticated join for {name} (HP: {db_hp}/{db_max_hp})")
                 conn.close()
             except Exception as e:
                 print(f"Token verification error during join: {e}")

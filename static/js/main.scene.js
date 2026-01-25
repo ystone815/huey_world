@@ -142,6 +142,13 @@ export class MainScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
+        this.levelText = this.add.text(0, 50, "Lv.1", {
+            font: '10px Arial',
+            fill: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+
         // Building System State
         this.isBuilding = false;
         this.buildType = null;
@@ -152,8 +159,14 @@ export class MainScene extends Phaser.Scene {
         // Health Bar (Moved higher for player visibility)
         this.createHealthBar(this.playerContainer, 40, 6, -40);
 
-        this.playerContainer.add([this.playerShadow, this.player, this.playerText]);
+        this.playerContainer.add([this.playerShadow, this.player, this.playerText, this.levelText]);
         this.playerContainer.setSize(32, 32);
+
+        // RPG Stats Init (Default)
+        this.playerContainer.hp = 100;
+        this.playerContainer.max_hp = 100;
+        this.playerContainer.level = 1;
+        this.playerContainer.exp = 0;
 
         // Character and Shadow should be affected by light
         this.player.setPipeline('Light2D');
@@ -335,9 +348,18 @@ export class MainScene extends Phaser.Scene {
             }
             this.playerText.setText(this.nickname);
 
-            // Update my health bar
-            if (data.hp !== undefined && data.max_hp !== undefined) {
-                this.updateHealthBar(this.playerContainer, data.hp, data.max_hp);
+            // Store RPG Stats
+            if (data.hp !== undefined) {
+                this.playerContainer.hp = data.hp;
+                this.playerContainer.max_hp = data.max_hp || 100;
+                this.playerContainer.level = data.level || 1;
+                this.playerContainer.exp = data.exp || 0;
+
+                this.updateHealthBar(this.playerContainer, this.playerContainer.hp, this.playerContainer.max_hp);
+
+                if (this.levelText) {
+                    this.levelText.setText("Lv." + this.playerContainer.level);
+                }
             }
 
             // Notify HTML UI
