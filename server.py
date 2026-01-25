@@ -76,9 +76,26 @@ class RemoveObjectRequest(BaseModel):
     x: float
     y: float
 
+class InventoryMoveRequest(BaseModel):
+    token: str
+    slot_from: int
+    slot_to: int
+
+class InventoryUseRequest(BaseModel):
+    token: str
+    slot_index: int
+
+class InventoryDropRequest(BaseModel):
+    token: str
+    slot_index: int
+    amount: int = 1
+    x: float
+    y: float
+
 # User Database Path
 USER_DB_PATH = 'db/user/users.db'
 WORLD_DB_PATH = 'db/world/world.db'
+
 
 # Building Costs Map
 BUILD_COSTS = {
@@ -606,6 +623,172 @@ async def remove_object(request: RemoveObjectRequest):
         await sio.emit('object_removed', {"x": request.x, "y": request.y})
         
         return {"success": True, "message": "Object removed and materials refunded"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Remove object error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# --- Inventory Interactions ---
+
+@app.post("/api/inventory/move")
+async def move_inventory_item(request: InventoryMoveRequest):
+    try:
+        conn = get_user_db()
+        cursor = conn.cursor()
+        
+        # Verify user
+        cursor.execute("SELECT user_id FROM sessions WHERE token = ?", (request.token,))
+        session = cursor.fetchone()
+        if not session:
+            conn.close()
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        user_id = session[0]
+        
+        # Get items at source and dest slots
+        cursor.execute("SELECT item_id, quantity FROM inventory WHERE user_id = ? AND slot_index = ?", (user_id, request.slot_from))
+        src_item = cursor.fetchone()
+        
+        cursor.execute("SELECT item_id, quantity FROM inventory WHERE user_id = ? AND slot_index = ?", (user_id, request.slot_to))
+        dst_item = cursor.fetchone()
+        
+        if not src_item:
+            conn.close()
+            # Nothing to move
+            return {"success": False, "message": "Source slot empty"}
+            
+        # Perform Swap
+        # 1. Delete both rows (temporarily)
+        cursor.execute("DELETE FROM inventory WHERE user_id = ? AND (slot_index = ? OR slot_index = ?)", 
+                      (user_id, request.slot_from, request.slot_to))
+        
+        # 2. Insert Src -> Dest
+        cursor.execute("INSERT INTO inventory (user_id, item_id, quantity, slot_index) VALUES (?, ?, ?, ?)",
+                      (user_id, src_item[0], src_item[1], request.slot_to))
+                      
+        # 3. Insert Dest -> Src (if existed)
+        if dst_item:
+           cursor.execute("INSERT INTO inventory (user_id, item_id, quantity, slot_index) VALUES (?, ?, ?, ?)",
+                      (user_id, dst_item[0], dst_item[1], request.slot_from))
+                      
+        conn.commit()
+        conn.close()
+        return {"success": True}
+        
+    except Exception as e:
+        print(f"Move item error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/inventory/use")
+async def use_inventory_item(request: InventoryUseRequest):
+    try:
+        conn = get_user_db()
+        cursor = conn.cursor()
+        
+        # Verify user
+        cursor.execute("SELECT user_id FROM sessions WHERE token = ?", (request.token,))
+        session = cursor.fetchone()
+        if not session:
+            conn.close()
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        user_id = session[0]
+        
+        # Get item
+        cursor.execute("SELECT item_id, quantity FROM inventory WHERE user_id = ? AND slot_index = ?", (user_id, request.slot_index))
+        item = cursor.fetchone()
+        if not item:
+            conn.close()
+            return {"success": False, "message": "Slot empty"}
+            
+        item_id, qty = item
+        
+        # Logic: Heal
+        heal_amount = 0
+        if item_id == 'forest_apple':
+            heal_amount = 10
+        elif item_id == 'desert_fruit':
+            heal_amount = 20
+        else:
+             conn.close()
+             return {"success": False, "message": "Item matches no usage effect"}
+             
+        # Apply Heal
+        cursor.execute("UPDATE users SET hp = min(max_hp, hp + ?) WHERE id = ?", (heal_amount, user_id))
+        
+        # Reduce Quantity
+        if qty > 1:
+            cursor.execute("UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND slot_index = ?", (user_id, request.slot_index))
+        else:
+            cursor.execute("DELETE FROM inventory WHERE user_id = ? AND slot_index = ?", (user_id, request.slot_index))
+            
+        conn.commit()
+        
+        # Fetch updated stats to return
+        cursor.execute("SELECT hp, max_hp FROM users WHERE id = ?", (user_id,))
+        new_stats = cursor.fetchone()
+        
+        conn.close()
+        
+        return {"success": True, "hp": new_stats[0], "max_hp": new_stats[1], "healed": heal_amount}
+
+    except Exception as e:
+        print(f"Use item error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/inventory/drop")
+async def drop_inventory_item(request: InventoryDropRequest):
+    try:
+        user_conn = get_user_db()
+        cursor = user_conn.cursor()
+        
+        # Verify
+        cursor.execute("SELECT u.id, u.username FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ?", (request.token,))
+        res = cursor.fetchone()
+        if not res:
+            user_conn.close()
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        user_id, username = res
+        
+        # Get Item
+        cursor.execute("SELECT item_id, quantity FROM inventory WHERE user_id = ? AND slot_index = ?", (user_id, request.slot_index))
+        item = cursor.fetchone()
+        if not item:
+            user_conn.close()
+            return {"success": False, "message": "No item to drop"}
+            
+        item_id, qty = item
+        drop_qty = 1 # Force drop 1 for now implementation simplicity
+        
+        # Remove from Inv
+        if qty > drop_qty:
+            cursor.execute("UPDATE inventory SET quantity = quantity - ? WHERE user_id = ? AND slot_index = ?", (drop_qty, user_id, request.slot_index))
+        else:
+            cursor.execute("DELETE FROM inventory WHERE user_id = ? AND slot_index = ?", (user_id, request.slot_index))
+            
+        user_conn.commit()
+        user_conn.close()
+        
+        # Add to World
+        world_conn = get_world_db()
+        w_cursor = world_conn.cursor()
+        
+        drop_type = f"drop_{item_id}"
+        
+        w_cursor.execute("INSERT INTO placed_objects (type, x, y, owner_username) VALUES (?, ?, ?, ?)",
+                        (drop_type, request.x, request.y, username))
+        world_conn.commit()
+        world_conn.close()
+        
+        # Broadcast
+        new_obj = {"type": drop_type, "x": request.x, "y": request.y, "owner": username}
+        await sio.emit('object_placed', new_obj)
+        
+        return {"success": True}
+
+    except Exception as e:
+        print(f"Drop item error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     except HTTPException:
         raise

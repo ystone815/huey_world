@@ -2,9 +2,9 @@
 
 ## Phase 1: RPG Foundations (Stats & Combat) ⚔️
 > *Start weak, grow strong.*
-- [ ] **Character Stats System**
-  - Implement Base HP, Attack Power, Defense.
-  - Visual Health Bar updates (link to stats).
+- [x] **Character Stats System**
+  - [x] Implement Base HP, Max HP logic.
+  - [x] Visual Health Bar updates & Status Window.
 - [ ] **Combat Mechanics**
   - Spacebar to attack (Sword swing animation).
   - Damage calculation: `(Attacker Dmg - Defender Def)`.
@@ -31,10 +31,9 @@
   - "Workbench" object for advanced crafting.
   - Recipes: Wood Sword, Leather Armor, Potion.
 
-## Phase 3: Survival & Recovery �
-- [ ] **Consumables**
-  - **Potions**: Instant HP recovery (Red Potion).
-  - **Food**: Cooking raw meat at Bonfire -> Steak (Heals over time).
+## Phase 3: Survival & Recovery ❤️
+- [x] **Consumables**
+  - **Food**: Eat apples/fruits to restore HP via Inventory Menu.
 - [ ] **Status Effects**
   - "Fullness" or "Regen" buff after eating.
 

@@ -437,6 +437,8 @@
             width: 80%;
             height: 80%;
             object-fit: contain;
+            pointer-events: none;
+            /* Let clicks pass to the parent slot */
         }
 
         .inv-item-qty {
@@ -472,6 +474,54 @@
         .page-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        /* Drag and Drop Styles */
+        .inv-slot.dragging {
+            opacity: 0.5;
+            border: 2px dashed #ffcc00;
+        }
+
+        .inv-slot.drag-over {
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid #00e676;
+        }
+
+        /* Context Menu */
+        #context-menu {
+            position: absolute;
+            background: #3e2723;
+            border: 1px solid #ffcc00;
+            border-radius: 5px;
+            padding: 5px 0;
+            display: none;
+            z-index: 3000;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .ctx-item {
+            padding: 8px 15px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            user-select: none;
+            -webkit-user-select: none;
+            /* Mobile Safari/Chrome */
+        }
+
+        .ctx-item:hover {
+            background: #5d4037;
+            color: #ffcc00;
+        }
+
+        .ctx-item.disabled {
+            color: #777;
+            cursor: default;
+        }
+
+        .ctx-item.disabled:hover {
+            background: transparent;
+            color: #777;
         }
 
         .page-indicator {
@@ -801,8 +851,25 @@
             border-color: #ffcc00;
         }
 
+        .hud-btn:hover .hud-hotkey {
+            opacity: 1;
+        }
+
         .hud-btn:active {
             transform: scale(0.95);
+        }
+
+        .hud-hotkey {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 9px;
+            color: #ffcc00;
+            font-weight: bold;
+            text-shadow: 1px 1px 0 #000;
+            opacity: 0;
+            /* Hidden by default */
+            transition: opacity 0.2s;
         }
 
         /* Status Overlay */
@@ -1257,9 +1324,15 @@
 
     <!-- HUD Bottom Bar -->
     <div id="hud-bottom-bar" style="display: none;"> <!-- Hidden until joined -->
-        <div class="hud-btn" onclick="toggleStatus()" title="My Status">📊</div>
-        <div class="hud-btn" onclick="toggleInventory()" title="Inventory">🎒</div>
-        <div class="hud-btn" onclick="toggleBuildMenu()" title="Build">🔨</div>
+        <div class="hud-btn" onclick="toggleStatus()" title="My Status (T)">
+            📊 <span class="hud-hotkey">T</span>
+        </div>
+        <div class="hud-btn" onclick="toggleInventory()" title="Inventory (I)">
+            🎒 <span class="hud-hotkey">I</span>
+        </div>
+        <div class="hud-btn" onclick="toggleBuildMenu()" title="Build (C)">
+            🔨 <span class="hud-hotkey">C</span>
+        </div>
         <div class="hud-btn"
             onclick="if(window.phaserGame){ window.phaserGame.scene.getScene('MainScene').socketManager.emitEmoji('❤️'); }"
             title="Wave">👋</div>
@@ -1310,6 +1383,12 @@
             <button class="arcade-btn" onclick="toggleStatus()"
                 style="width:100%; margin-top:20px; font-size:16px;">Close</button>
         </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu">
+        <div class="ctx-item" id="ctx-use">Eat / Use</div>
+        <div class="ctx-item" id="ctx-drop">Drop</div>
     </div>
 
     <!-- Game Scripts -->
@@ -1609,7 +1688,19 @@
 
                 const item = inventory.find(it => it.slot_index === i);
                 if (item) {
-                    // Item visual: Try image, fallback to emoji/placeholder
+                    slot.draggable = true;
+                    // Drag Events
+                    slot.addEventListener('dragstart', (e) => {
+                        handleDragStart(e);
+                        // Set drag image
+                        const img = slot.querySelector('img') || slot.querySelector('div'); // fallback to emoji div
+                        if (img) e.dataTransfer.setDragImage(img, 25, 25);
+                    });
+
+                    // Item Menu (Unified Left Click / Touch)
+                    slot.addEventListener('click', handleSlotClick);
+
+                    // Item visual
                     const img = document.createElement('img');
                     img.src = `static/assets/item_${item.item_id}.png`;
                     img.className = 'inv-item-img';
@@ -1638,6 +1729,11 @@
                     }
                 }
 
+                // Allow Drop on empty or filled slots
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('dragleave', handleDragLeave);
+                slot.addEventListener('drop', handleDrop);
+
                 invGrid.appendChild(slot);
             }
 
@@ -1664,6 +1760,160 @@
         updateInventoryUI();
         window.updateInventoryUI = updateInventoryUI;
 
+        // --- Inventory Interactivity (Drag & Drop, Context Menu) ---
+        let draggedSlotIndex = null;
+        let contextMenuSlotIndex = null;
+        const contextMenu = document.getElementById('context-menu');
+
+        function handleDragStart(e) {
+            const slot = e.target.closest('.inv-slot');
+            if (!slot) return;
+            draggedSlotIndex = parseInt(slot.dataset.index);
+            slot.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.target.closest('.inv-slot').classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.target.closest('.inv-slot').classList.remove('drag-over');
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.target.closest('.inv-slot');
+            if (slot) slot.classList.remove('drag-over');
+
+            if (!slot) return;
+            const targetSlotIndex = parseInt(slot.dataset.index);
+
+            if (draggedSlotIndex !== null && draggedSlotIndex !== targetSlotIndex) {
+                await moveInventoryItem(draggedSlotIndex, targetSlotIndex);
+            }
+
+            // Cleanup
+            const allSlots = document.querySelectorAll('.inv-slot');
+            allSlots.forEach(s => s.classList.remove('dragging'));
+            draggedSlotIndex = null;
+        }
+
+        function handleSlotClick(e) {
+            // Debug
+            console.log("Slot clicked!", e.target);
+
+            // Simple click: Open menu
+            e.preventDefault();
+            e.stopPropagation(); // Stop bubbling to window click listener
+            const slot = e.target.closest('.inv-slot');
+            if (!slot) return;
+
+            const slotIndex = parseInt(slot.dataset.index);
+            contextMenuSlotIndex = slotIndex;
+
+            // Position Menu
+            contextMenu.style.display = 'block';
+            contextMenu.style.left = e.pageX + 'px';
+            contextMenu.style.top = e.pageY + 'px';
+
+            // Check if item is usable vs just drop
+            // For now, simpler to just show options.
+        }
+
+        function hideContextMenu() {
+            contextMenu.style.display = 'none';
+        }
+
+        // Context Menu Action Listeners
+        document.getElementById('ctx-use').addEventListener('click', async () => {
+            if (contextMenuSlotIndex !== null) await useInventoryItem(contextMenuSlotIndex);
+            hideContextMenu();
+        });
+
+        document.getElementById('ctx-drop').addEventListener('click', async () => {
+            if (contextMenuSlotIndex !== null) await dropInventoryItem(contextMenuSlotIndex);
+            hideContextMenu();
+        });
+
+        // Global click to close context menu
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('#context-menu')) {
+                hideContextMenu();
+            }
+        });
+
+        // API Calls
+        async function moveInventoryItem(from, to) {
+            const token = localStorage.getItem('hueyworld_token');
+            if (!token) return;
+
+            try {
+                const res = await fetch('/api/inventory/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, slot_from: from, slot_to: to })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // Re-fetch inventory explicitly
+                    if (window.phaserGame) {
+                        window.phaserGame.scene.getScene('MainScene').fetchInventoryFromServer();
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function useInventoryItem(slot) {
+            const token = localStorage.getItem('hueyworld_token');
+            if (!token) return;
+            try {
+                const res = await fetch('/api/inventory/use', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, slot_index: slot })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // Update stats locally
+                    if (window.phaserGame) {
+                        const scene = window.phaserGame.scene.getScene('MainScene');
+                        scene.playerContainer.hp = data.hp;
+                        scene.playerContainer.max_hp = data.max_hp;
+                        scene.updateHealthBar(scene.playerContainer, data.hp, data.max_hp);
+                        if (data.healed > 0) scene.showFloatingNote?.(`+${data.healed} HP`);
+                        // Sync inventory
+                        scene.fetchInventoryFromServer();
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function dropInventoryItem(slot) {
+            const token = localStorage.getItem('hueyworld_token');
+            if (!token) return;
+            if (window.phaserGame) {
+                const scene = window.phaserGame.scene.getScene('MainScene');
+                const p = scene.playerContainer;
+                try {
+                    const res = await fetch('/api/inventory/drop', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token, slot_index: slot, x: p.x, y: p.y })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        scene.fetchInventoryFromServer();
+                    }
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        // Update Inventory UI to attach listeners
+        // Need to redefine updateInventoryUI loop part mostly.
+
         closeInv.addEventListener('click', () => {
             invOverlay.style.display = 'none';
         });
@@ -1682,6 +1932,18 @@
             }
         });
 
+        function toggleInventory() {
+            const isVisible = invOverlay.style.display === 'flex';
+            if (isVisible) {
+                invOverlay.style.display = 'none';
+            } else {
+                currentInvPage = 1;
+                updateInventoryUI();
+                invOverlay.style.display = 'flex';
+            }
+        }
+        window.toggleInventory = toggleInventory;
+
         // Click outside to close (Guestbook)
         const gbOverlay = document.getElementById('guestbook-overlay');
         gbOverlay.addEventListener('click', (e) => {
@@ -1690,12 +1952,27 @@
             }
         });
 
-        // Close on ESC
+        // Global Hotkeys (I, T, C)
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
+            // Ignore if typing in an input
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+
+            // Ignore if game not joined
+            if (!window.phaserGame) return;
+
+            const key = e.key.toLowerCase();
+            if (key === 'i') {
+                toggleInventory();
+            } else if (key === 't') {
+                toggleStatus();
+            } else if (key === 'c') {
+                toggleBuildMenu();
+            } else if (key === 'escape') {
                 document.getElementById('guestbook-overlay').style.display = 'none';
-                invOverlay.style.display = 'none';
+                document.getElementById('inventory-overlay').style.display = 'none';
+                document.getElementById('status-overlay').style.display = 'none';
                 closeArcade();
+                if (document.getElementById('build-overlay').style.display === 'flex') toggleBuildMenu();
             }
         });
 

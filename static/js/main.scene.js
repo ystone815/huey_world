@@ -533,126 +533,10 @@ export class MainScene extends Phaser.Scene {
         // 6.1 Enable Multi-Touch (Increase active pointers)
         this.input.addPointer(4); // Supports up to 5 concurrent touches
 
-        // 7. Mobile Emoji Radial Menu
-        this.createMobileEmojiMenu();
+
     }
 
-    createMobileEmojiMenu() {
-        // Only show on mobile or small screens
-        const isMobile = this.sys.game.device.os.android || this.sys.game.device.os.iOS || window.innerWidth < 768;
-        if (!isMobile) return;
 
-        console.log("Creating Mobile Emoji Radial Menu");
-
-        const screenWidth = this.scale.width;
-        const screenHeight = this.scale.height;
-        // Reduced size: 70% of original (28 -> 20)
-        const btnRadius = 20;
-        const margin = 15;
-
-        // Position: Bottom-Right
-        const x = screenWidth - btnRadius - margin;
-        const y = screenHeight - btnRadius - margin;
-
-        // 1. Main Button
-        const btnBase = this.add.circle(x, y, btnRadius, 0x444444, 0.8).setScrollFactor(0).setDepth(2000).setInteractive();
-        const btnIcon = this.add.text(x, y, '❤️', { fontSize: '18px' }).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
-        btnBase.setStrokeStyle(2, 0xffffff);
-
-        // 2. Radial Menu Container
-        const menuContainer = this.add.container(x, y).setScrollFactor(0).setDepth(2010).setVisible(false);
-        const menuBg = this.add.circle(0, 0, 60, 0x000000, 0.4).setStrokeStyle(1, 0x888888); // Reduced bg radius
-
-        const emojis = [
-            { char: '😂', dx: 0, dy: -45, dir: 'north' },
-            { char: '❤️', dx: 0, dy: 45, dir: 'south' },
-            { char: '🔥', dx: 45, dy: 0, dir: 'east' },
-            { char: '😮', dx: -45, dy: 0, dir: 'west' }
-        ];
-
-        const emojiObjs = {};
-        emojis.forEach(e => {
-            const txt = this.add.text(e.dx, e.dy, e.char, { fontSize: '24px' }).setOrigin(0.5);
-            menuContainer.add(txt);
-            emojiObjs[e.dir] = txt;
-        });
-
-        menuContainer.addAt(menuBg, 0);
-
-        // Interaction state
-        let emojiPointerId = null;
-        let selectedDir = null;
-
-        btnBase.on('pointerdown', (pointer) => {
-            emojiPointerId = pointer.id;
-            menuContainer.setVisible(true);
-            btnBase.setFillStyle(0x666666);
-        });
-
-        this.input.on('pointermove', (pointer) => {
-            if (emojiPointerId !== pointer.id) return;
-
-            const dx = pointer.x - x;
-            const dy = pointer.y - y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            // Reset highlights
-            Object.values(emojiObjs).forEach(o => o.setScale(1));
-
-            if (dist > 20) { // Reduced threshold
-                // Determine direction
-                let dir = null;
-                if (Math.abs(dx) > Math.abs(dy)) {
-                    dir = dx > 0 ? 'east' : 'west';
-                } else {
-                    dir = dy > 0 ? 'south' : 'north';
-                }
-
-                selectedDir = dir;
-                emojiObjs[dir].setScale(1.5);
-            } else {
-                selectedDir = null;
-            }
-        });
-
-        this.input.on('pointerup', (pointer) => {
-            if (emojiPointerId !== pointer.id) return;
-
-            if (selectedDir && this.isJoined) {
-                const emoji = emojis.find(e => e.dir === selectedDir).char;
-                this.showEmojiPopup(this.playerContainer, emoji);
-                if (this.socketManager) {
-                    this.socketManager.emitEmoji(emoji);
-                }
-            }
-
-            emojiPointerId = null;
-            selectedDir = null;
-            menuContainer.setVisible(false);
-            btnBase.setFillStyle(0x444444);
-            Object.values(emojiObjs).forEach(o => o.setScale(1));
-        });
-
-        // 3. Mobile Inventory Button (Top-Right)
-        const invBtnRadius = 20; // Reduced from 28
-        const invBtnX = screenWidth - invBtnRadius - 10; // Offset from right
-        const invBtnY = 180; // Below minimap and clock
-
-        const mobInvBtn = this.add.circle(invBtnX, invBtnY, invBtnRadius, 0x444444, 0.8)
-            .setScrollFactor(0)
-            .setDepth(2000)
-            .setInteractive()
-            .setStrokeStyle(2, 0xffffff);
-
-        const mobInvIcon = this.add.text(invBtnX, invBtnY, '🎒', { fontSize: '18px' }) // Reduced from 24px
-            .setOrigin(0.5)
-            .setScrollFactor(0)
-            .setDepth(2001);
-
-        mobInvBtn.on('pointerdown', () => {
-            this.toggleInventory();
-        });
-    }
 
     toggleInventory() {
         const overlay = document.getElementById('inventory-overlay');
@@ -1901,6 +1785,37 @@ export class MainScene extends Phaser.Scene {
     }
 
     renderPlacedObject(obj) {
+        // Special Rendering for Dropped Items
+        if (obj.type.startsWith('drop_')) {
+            const itemId = obj.type.replace('drop_', '');
+            const itemEmojis = {
+                'wood': '🪵', 'forest_apple': '🍎',
+                'frozen_wood': '🧊', 'snow_crystal': '💎',
+                'cactus_fiber': '🧵', 'desert_fruit': '🌵'
+            };
+            const emoji = itemEmojis[itemId] || '📦';
+
+            const txt = this.add.text(obj.x, obj.y, emoji, { fontSize: '24px' })
+                .setOrigin(0.5)
+                .setDepth(obj.y)
+                .setData('x', obj.x)
+                .setData('y', obj.y)
+                .setPipeline('Light2D');
+
+            this.placedObjectsGroup.add(txt);
+
+            // Floating animation
+            this.tweens.add({
+                targets: txt,
+                y: obj.y - 5,
+                duration: 1000,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+            return;
+        }
+
         const emojiMap = { 'fence_wood': '🪵', 'wall_stone': '🧱', 'bonfire': '🔥' };
 
         const txt = this.add.text(obj.x, obj.y, emojiMap[obj.type] || '❓', { fontSize: '40px' })

@@ -23,15 +23,26 @@
   - Animated bonfires and particle effects.
 
 ## 4. Systems 🛠️
-- **Inventory**: Smart stacking, auto-merge on login, 20-slot paged UI.
+- **Inventory**: 
+  - Smart stacking & 20-slot paged UI.
+  - **Drag & Drop** organization.
+  - **Context Menu**: Eat (Restore HP) / Drop (Floating item visualization).
+  - Unified Left-Click/Touch interaction for Mobile & PC.
 - **Building**: 
   - Grid-based placement (48x48 snapping).
   - Persistence via SQLite (`world.db`).
   - "Remove Tool" with resource refund.
+
+## 5. RPG Mechanics ⚔️
+- **Stats**: HP, Max HP, Level, EXP.
+- **Progression**: Visual Level text, Status Window (Stats overview).
+- **Consumables**: Eat food to restore HP using the Inventory Context Menu.
+
+## 6. Systems (Meta) 🏗️
 - **Guestbook**: Persistent message board with proximity trigger.
 - **Minigames**: "Arcade Hub" with Leaderboards (Cactus Dodge, Resource Rush, Math Blitz).
 
-## 5. UI/UX 🎨
+## 7. UI/UX 🎨
 - **HUD**: Minimap (with entity dots), Digital Clock, Floating Health Bars.
 - **Responsiveness**: Mobile-optimized icons (Backpack, Build, Emotes).
 - **Authentication**: Salted hash login, Session persistence ("Remember Me").
